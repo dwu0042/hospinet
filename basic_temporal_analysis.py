@@ -7,12 +7,15 @@ import warnings
 def snapshots_outbound(G: TemporalNetwork):
     """Iterator of temporal snapshots of outbound edges that have a common source node time
     
+    The snapshots will lose temporal information.
     The iterated elements will be a tuple of the time of the snapshot and the snapshot DiGraph"""
     for t, locs in G.snapshots.items():
         S = nx.DiGraph()
         for loc in locs:
-            for neighbour in G[loc, t]:
-                S.add_edge((loc, t), neighbour, weight=G.edges[(loc, t), neighbour]['weight'])
+            for neighbour, _t in G[loc, t]:
+                existing_weight = S.edges.get((loc, neighbour), {'weight': 0})['weight']
+                new_weight = existing_weight + G.edges[(loc, t), (neighbour, _t)]['weight']
+                S.add_edge(loc, neighbour, weight=new_weight)
         yield t, S
 
 def global_reaching_timeseries(G: TemporalNetwork, weight='weight'):
