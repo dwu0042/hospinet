@@ -3,8 +3,9 @@ import networkx as nx
 from functools import wraps
 from typing import Callable
 import warnings
+import operator
 
-def snapshots_outbound(G: TemporalNetwork):
+def snapshots_outbound(G: TemporalNetwork, weight='weight', compose=operator.add):
     """Iterator of temporal snapshots of outbound edges that have a common source node time
     
     The snapshots will lose temporal information.
@@ -13,12 +14,12 @@ def snapshots_outbound(G: TemporalNetwork):
         S = nx.DiGraph()
         for loc in locs:
             for neighbour, _t in G[loc, t]:
-                existing_weight = S.edges.get((loc, neighbour), {'weight': 0})['weight']
-                new_weight = existing_weight + G.edges[(loc, t), (neighbour, _t)]['weight']
+                existing_weight = S.edges.get((loc, neighbour), {weight: 0})[weight]
+                new_weight = compose(existing_weight , G.edges[(loc, t), (neighbour, _t)][weight])
                 S.add_edge(loc, neighbour, weight=new_weight)
         yield t, S
 
-def global_reaching_timeseries(G: TemporalNetwork, weight='weight'):
+def global_reaching_timeseries(G: TemporalNetwork, weight='weight', snapshots=None):
     """The timeseries of the global reaching centrality of the outbound snapshots of the temporal network
     
     The global reaching centrality ranges from 0 to 1, and is defined with respect to the local reaching centrality.
@@ -38,7 +39,10 @@ def global_reaching_timeseries(G: TemporalNetwork, weight='weight'):
             return 0
         return nx.global_reaching_centrality(G, *args, **kwargs)
 
-    return sorted((t, global_reaching_centrality(S, weight=weight)) for t, S in snapshots_outbound(G))
+    if snapshots is None:
+        snapshots = snapshots_outbound(G)
+
+    return sorted((t, global_reaching_centrality(S, weight=weight)) for t, S in snapshots)
 
 def failover(func: Callable, default=0):
     """Decorates a function, returning a failover default value if it raises an Exception of some kind"""
@@ -53,8 +57,8 @@ def failover(func: Callable, default=0):
             return ret
     return failovered_func
 
-def temporal_timeseries(G: TemporalNetwork, method: Callable, safe=False, default=0, *args, **kwargs):
-    """Evaluates a network metric over the outbound snapshots of a temporal network
+def temporal_timeseries(G: TemporalNetwork, method: Callable, safe=False, default=0, snapshots=None, *args, **kwargs):
+    """Evaluates a network metric over snapshots of a temporal network
     
     Parameters
     ----------
@@ -62,6 +66,7 @@ def temporal_timeseries(G: TemporalNetwork, method: Callable, safe=False, defaul
     method: network metric to evaluate (not necessarily scalar)
     safe: If False, overrides the returned value if the method raises an Exception
     default: Replacement value if safe is False
+    snapshots: Iterable of snapshots of the temporal network, defaults to outbound snapshots. Snapshots to have structure (t, S) where t is the time and S is a graph.
 
     Returns
     -------
@@ -69,5 +74,8 @@ def temporal_timeseries(G: TemporalNetwork, method: Callable, safe=False, defaul
     """
     if not safe:
         method = failover(method, default=default)
+
+    if snapshots is None:
+        snapshots = snapshots_outbound(G)
     
-    return sorted((t, method(S, *args, **kwargs)) for t, S in snapshots_outbound(G))
+    return sorted((t, method(S, *args, **kwargs)) for t, S in snapshots)

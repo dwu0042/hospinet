@@ -39,7 +39,7 @@ class TemporalNetwork(nx.DiGraph):
         def parse_tuple(tuple_str):
             loc, t = tuple_str.lstrip('(').rstrip(')').split(',')
             loc = loc.strip("'")
-            return loc, t
+            return loc, int(t)
 
         G = nx.read_graphml(path, node_type=parse_tuple, *args, **kwargs)
         
