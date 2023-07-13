@@ -5,6 +5,7 @@ import datetime
 _REF_DATE = datetime.datetime(year=2017, month=3, day=1)
 
 def normalise_dates(df: pl.DataFrame, cols, ref_date=_REF_DATE):
+    """Normalises Datetime columns to the number of days past a given reference date"""
     return df.with_columns(*(
         (pl.col(col) - ref_date).dt.seconds() /60/60/24
         for col in cols
@@ -13,7 +14,19 @@ def normalise_dates(df: pl.DataFrame, cols, ref_date=_REF_DATE):
 
 _empty_edge = {'weight': 0}
 def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return_window=365):
+    """Converts a Dataframe of presences to a temporal network with base units of days
+    
+    Parameters
+    ----------
+    presence: pola.rs DataFrame of presence. Assumes that the columns are ['sID', 'fID', 'Adate', 'Ddate']
+              Assumes that 'Adate' and 'Ddate' columns are normalised to integers
+    discretisation: time discretisation of the temporal network
+    return_window: threshold over which successive presences are ignored
 
+    Returns
+    -------
+    TemporalNetwork where edges represent patients that have transferred between given locations.
+    """
     G = TemporalNetwork()
 
     presence = (presence.sort(pl.col('Adate'))
