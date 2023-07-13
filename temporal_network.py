@@ -23,3 +23,24 @@ class TemporalNetwork(nx.DiGraph):
     
     def when_present(self, loc):
         return [(loc, t) for t in self.present[loc]]
+    
+    @classmethod
+    def from_timenode_projection(cls, G:nx.DiGraph):
+        TN = cls(G)
+        for (u_loc, u_t), (v_loc, v_t) in G.edges:
+            TN.snapshots[u_t].add(u_loc)
+            TN.snapshots[v_t].add(v_loc)
+            TN.present[u_loc].add(u_t)
+            TN.present[v_loc].add(v_t)
+        return TN
+    
+    @classmethod
+    def read_graphml(cls, path, *args, **kwargs):
+        def parse_tuple(tuple_str):
+            loc, t = tuple_str.lstrip('(').rstrip(')').split(',')
+            loc = loc.strip("'")
+            return loc, t
+
+        G = nx.read_graphml(path, node_type=parse_tuple, *args, **kwargs)
+        
+        return cls.from_timenode_projection(G)
