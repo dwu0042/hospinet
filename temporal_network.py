@@ -1,6 +1,8 @@
 import networkx as nx
 from collections import defaultdict
 
+EMPTY_EDGE = {'weight': 0}
+
 class TemporalNetwork(nx.DiGraph):
     def __init__(self, incoming_graph_data=None, **attr):
         super().__init__(incoming_graph_data, **attr)
@@ -33,7 +35,7 @@ class TemporalNetwork(nx.DiGraph):
             TN.present[u_loc].add(u_t)
             TN.present[v_loc].add(v_t)
         return TN
-    
+
     @classmethod
     def read_graphml(cls, path, *args, **kwargs):
         def parse_tuple(tuple_str):
@@ -44,3 +46,16 @@ class TemporalNetwork(nx.DiGraph):
         G = nx.read_graphml(path, node_type=parse_tuple, *args, **kwargs)
         
         return cls.from_timenode_projection(G)
+
+    def to_static(self):
+        S = nx.DiGraph()
+        Nt = len(self.snapshots)
+        for loc, ts in self.present.items():
+            S.add_node(loc, present=len(ts)/Nt)
+            for t in ts:
+                for (nbr_loc, nbr_t), weight in self[loc, t].items():
+                    if loc != nbr_loc:
+                        existing_weight = S.get_edge_data(loc, nbr_loc, EMPTY_EDGE)['weight']
+                        new_weight = existing_weight + weight['weight']
+                        S.add_edge(loc, nbr_loc, weight=new_weight)
+        return S

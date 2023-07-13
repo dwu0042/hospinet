@@ -1,4 +1,4 @@
-from temporal_network import TemporalNetwork
+from temporal_network import TemporalNetwork, EMPTY_EDGE as _empty_edge
 import polars as pl
 import datetime
 
@@ -12,7 +12,6 @@ def normalise_dates(df: pl.DataFrame, cols, ref_date=_REF_DATE):
     )
     )
 
-_empty_edge = {'weight': 0}
 def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return_window=365):
     """Converts a Dataframe of presences to a temporal network with base units of days
     
