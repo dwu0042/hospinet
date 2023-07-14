@@ -36,14 +36,24 @@ def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return
                                 discretisation)
                             .alias('present'))
                         .explode('present')
+    ).sort('sID', 'present', 'Adate')
+
+    edges = (presence
+             # get the previous record
+            .with_columns(
+                pl.col('sID', 'present', 'fID').shift(1).map_alias(lambda x: f"prev_{x}"),
+            )
+            # check same individual, and within the return window
+            .filter(
+                (pl.col('sID').eq(pl.col('prev_sID')))
+                & ((pl.col('present') - pl.col('prev_present')) < return_window)
+            )
+            # pull columns
+            .select('prev_fID', 'prev_present', 'fID', 'present')
+            # get counts of edges
+            .groupby('*').count()
     )
 
-    for partition in presence.partition_by('sID'):
-        partition = partition.sort('present', 'Adate').select('fID', 'present')
-        for row0, row1 in zip(partition.shift(1).iter_rows(), partition.iter_rows()):
-            if row0[-1] is not None and ((row1[-1] - row0[-1]) < return_window):
-                nodes = (row0, row1)
-                w = G.edges.get(nodes, _empty_edge)['weight'] + 1
-                G.add_edge(*nodes, weight=w)
+    G.add_weighted_edges_from(((ux, ut), (vx, vt), w) for ux, ut, vx, vt, w in edges.iter_rows())
 
     return G
