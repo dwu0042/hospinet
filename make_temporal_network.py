@@ -38,6 +38,8 @@ def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return
                         .explode('present')
     ).sort('sID', 'present', 'Adate')
 
+    G.add_nodes_from(tuple(x) for x in presence.select('fID', 'present').unique().iter_rows())
+
     edges = (presence
              # get the previous record
             .with_columns(
@@ -55,5 +57,9 @@ def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return
     )
 
     G.add_weighted_edges_from(((ux, ut), (vx, vt), w) for ux, ut, vx, vt, w in edges.iter_rows())
+
+    G.snapshots = dict(presence.groupby('present').all().select(pl.col('present'), pl.col('fID').list.unique()).to_numpy())
+
+    G.present = dict(presence.groupby('fID').all().select(pl.col('fID'), pl.col('present').list.unique()).to_numpy())
 
     return G

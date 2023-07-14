@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Callable
 import warnings
 import operator
+from scipy import signal
 
 def snapshots_outbound(G: TemporalNetwork, weight='weight', compose=operator.add):
     """Iterator of temporal snapshots of outbound edges that have a common source node time
@@ -82,3 +83,7 @@ def temporal_timeseries(G: TemporalNetwork, method: Callable, safe=False, defaul
         snapshots = snapshots_outbound(G)
     
     return sorted((t, method(S, *args, **kwargs)) for t, S in snapshots)
+
+
+def power_spectrum(ts, series, window='bartlett'):
+    return signal.periodogram(series, window=window)
