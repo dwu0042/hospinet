@@ -35,7 +35,10 @@ def global_reaching_timeseries(G: TemporalNetwork, weight='weight', snapshots=No
     """
     @wraps(nx.global_reaching_centrality)
     def global_reaching_centrality(G, *args, **kwargs):
-        if G.number_of_nodes() < 1:
+        # we use 2 to capture two edge cases:
+        #   N = 0: No node with an outedge
+        #   N = 1: Centrality not well-defined
+        if G.number_of_nodes() < 2:
             return 0
         return nx.global_reaching_centrality(G, *args, **kwargs)
 
