@@ -1,4 +1,4 @@
-from temporal_network import TemporalNetwork
+from tempest.temporal_network import TemporalNetwork
 import networkx as nx
 from functools import wraps
 from typing import Callable

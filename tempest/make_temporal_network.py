@@ -1,4 +1,4 @@
-from temporal_network import TemporalNetwork, EMPTY_EDGE as _empty_edge
+from tempest.temporal_network import TemporalNetwork, EMPTY_EDGE as _empty_edge
 import polars as pl
 import datetime
 
