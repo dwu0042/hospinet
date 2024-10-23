@@ -4,6 +4,8 @@ author: David Wu
 date: 23 October 2024
 format:
     pdf: default
+    html:
+        code-fold: false
 jupyter: python3
 ---
 
@@ -59,7 +61,7 @@ This object is also a `networkx.DiGraph` object, so we can use the native plotti
 
 ```{python}
 static_network = network.to_static()
-pos = nx.spring_layout(static_network)
+pos = nx.spring_layout(static_network, seed=1451)
 edge_labels = {
         tuple(edge): f"{attr}"
         for *edge, attr in static_network.edges(data='weight')
