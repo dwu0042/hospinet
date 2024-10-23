@@ -152,6 +152,7 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose=1):
             )
         if n_ov == 0:
             break
-    print("History of non-overlapping patient records:")
-    print([z.height for z in zfs])
+    if verbose:
+        print("History of non-overlapping patient records:")
+        print([z.height for z in zfs])
     return pl.concat([*zfs, df])
