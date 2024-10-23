@@ -1,0 +1,82 @@
+---
+title: A Small Example
+author: David Wu
+date: 23 October 2024
+format:
+    pdf: default
+jupyter: python3
+---
+
+Here, we will clean and process a small database into a temporal network of patient transfers.
+
+All the functionality is provided in the `tempest` library.
+```{python}
+import tempest
+
+import polars as pl
+import networkx as nx
+
+from matplotlib import pyplot as plt # for later
+```
+
+
+We load the database (in the form of a csv), and clean it using the `tempest.cleaner` submodule. We specify the column names, since they are different from the (standardised) default.
+```{python}
+source_db = tempest.cleaner.ingest_csv("./data/admissions.csv", convert_dates=True)
+source_db.head(5)
+```
+
+```{python}
+cleaned_db = tempest.cleaner.clean_database(
+    source_db,
+    delete_missing=True,
+    delete_errors=True,
+    subject_id = 'patient',
+    facility_id = 'hospital',
+    admission_date = 'admission',
+    discharge_date = 'discharge',
+    retain_auxiliary_data = True,
+)
+# encode dates to numerics
+first_date = cleaned_db.select(pl.col('Adate').min()).item()
+numeric_db = tempest.cleaner.normalise_dates(
+    cleaned_db,
+    cols = ['Adate', 'Ddate'],
+    ref_date = first_date
+) 
+```
+
+We can then process this into a TemporalNetwork object directly using the `from_presence` class method
+
+```{python}
+network = tempest.TemporalNetwork.from_presence(
+    numeric_db,
+    discretisation=1,
+)
+```
+
+This object is also a `networkx.DiGraph` object, so we can use the native plotting functionality. We project this down to static nodes first, so that we don't get the full temporal graph.
+
+```{python}
+static_network = network.to_static()
+pos = nx.spring_layout(static_network)
+edge_labels = {
+        tuple(edge): f"{attr}"
+        for *edge, attr in static_network.edges(data='weight')
+    }
+nx.draw_networkx(static_network, pos=pos, connectionstyle='arc3,rad=0.05')
+nx.draw_networkx_edge_labels(
+    static_network, 
+    pos=pos, 
+    edge_labels=edge_labels,
+    label_pos=0.4,
+    connectionstyle='arc3,rad=0.05'
+);
+```
+
+We provide some basic indexing support via methods:
+
+```{python}
+print("Nodes with presence at time 15: ", network.nodes_at_time(15))
+print("When hospital D is occupied: ", network.when_present('D'))
+```
