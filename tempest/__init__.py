@@ -5,3 +5,5 @@ __all__ = [
 ]
 
 from . import *
+
+from .temporal_network import TemporalNetwork

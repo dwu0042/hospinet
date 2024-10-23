@@ -28,7 +28,7 @@ class DataHandlingError(Exception):
 def ingest_csv(
     csv_path: PathLike | str,
     convert_dates: bool = False,
-) -> pl.DataFrames:
+) -> pl.DataFrame:
     return pl.read_csv(
         csv_path, has_header=True, try_parse_dates=convert_dates, null_values=_nulls
     )
@@ -38,7 +38,7 @@ def clean_database(
     database: pl.DataFrame,
     delete_missing: bool = False,
     delete_errors: bool = False,
-    convert_dates: bool = False,
+    manually_convert_dates: bool = False,
     date_format: str = r"%Y-%m-%d",
     subject_id: str = "sID",
     facility_id: str = "fID",
@@ -50,43 +50,58 @@ def clean_database(
     n_iters: int = 100,
     verbose: bool = True,
 ) -> pl.DataFrame:
-    report = standardise_column_names(
-        database, subject_id, facility_id, admission_date, discharge_date, verbose
+
+    database = standardise_column_names(
+        database=database, 
+        subject_id=subject_id, 
+        facility_id=facility_id, 
+        admission_date=admission_date, 
+        discharge_date=discharge_date, 
+        verbose=verbose,
     )
 
-    report = coerce_data_types(
-        report, convert_dates, date_format, subject_dtype, facility_dtype, verbose
+    database = coerce_data_types(
+        database=database, 
+        manually_convert_dates=manually_convert_dates, 
+        date_format=date_format, 
+        subject_dtype=subject_dtype, 
+        facility_dtype=facility_dtype, 
+        verbose=verbose,
     )
 
     # Trim auxiliary data
     if not retain_auxiliary_data:
         if verbose:
             print("Trimming auxiliary data...")
-        report = report.select(pl.col("sID", "fID", "Adate", "Ddate"))
+        database = database.select(pl.col("sID", "fID", "Adate", "Ddate"))
 
     # Check and clean missing values
-    report = clean_missing_values(
-        report, delete_missing=delete_missing, verbose=verbose
+    database = clean_missing_values(
+        database=database, 
+        delete_missing=delete_missing, 
+        verbose=verbose,
     )
 
     # Check erroneous records
-    report = clean_erroneous_records(
-        report, delete_errors=delete_errors, verbose=verbose
+    database = clean_erroneous_records(
+        database=database, 
+        delete_errors=delete_errors, 
+        verbose=verbose,
     )
 
     # remove row duplicates
     if verbose:
         print("Removing duplicate records...")
-    report = report.unique()
+    database = database.unique()
 
     # Fix overlapping stays
-    report = fix_all_overlaps(report, n_iters, verbose)
+    database = fix_all_overlaps(database, n_iters, verbose)
 
-    return report
+    return database
 
 
 def standardise_column_names(
-    df: pl.DataFrame,
+    database: pl.DataFrame,
     subject_id: str = "sID",
     facility_id: str = "fID",
     admission_date: str = "Adate",
@@ -99,7 +114,7 @@ def standardise_column_names(
     if verbose:
         print("Checking existence of columns...")
     expected_cols = {subject_id, facility_id, admission_date, discharge_date}
-    found_cols = set(df.columns)
+    found_cols = set(database.columns)
     missing_cols = expected_cols.difference(found_cols)
     if len(missing_cols):
         raise DataHandlingError(
@@ -111,7 +126,7 @@ def standardise_column_names(
     # Standardise column names
     if verbose:
         print("Standardising column names...")
-    return df.rename(
+    return database.rename(
         {
             subject_id: "sID",
             facility_id: "fID",
@@ -123,7 +138,7 @@ def standardise_column_names(
 
 def coerce_data_types(
     database: pl.DataFrame,
-    convert_dates: bool = False,
+    manually_convert_dates: bool = False,
     date_format: str = r"%Y-%m-%d",
     subject_dtype: pl.DataType = pl.Utf8,
     facility_dtype: pl.DataType = pl.Utf8,
@@ -132,23 +147,21 @@ def coerce_data_types(
     # Check data format, column names, variable format, parse dates
     if verbose:
         print("Coercing types...")
-    if convert_dates:
+    if manually_convert_dates:
         if verbose:
-            print("Converting dates...")
+            print(f"Manually converting dates from format {date_format}...")
         date_expressions = [
             pl.col("Adate").str.strptime(pl.Datetime, format=date_format),
             pl.col("Ddate").str.strptime(pl.Datetime, format=date_format),
         ]
     else:
         # do nothing
-        date_expressions = [pl.col("Adate"), pl.col("Ddate")]
+        date_expressions = []
     # Coerce types
     database = database.with_columns(
-        [
-            pl.col("sID").cast(subject_dtype),
-            pl.col("fID").cast(facility_dtype),
-            *date_expressions,
-        ]
+        pl.col("sID").cast(subject_dtype),
+        pl.col("fID").cast(facility_dtype),
+        *date_expressions,
     )
     if verbose:
         print("Type coercion done.")
@@ -162,9 +175,10 @@ def clean_missing_values(
     # Check for missing values
     if verbose:
         print("Checking for missing values...")
-    missing_records = database.filter(
-        pl.any(pl.col("*").is_null()) | pl.any(pl.col("sID", "fID").str.strip() == "")
-    )
+    missing_records = database.filter((
+        pl.any_horizontal(pl.all().is_null()) 
+        | pl.any_horizontal(pl.col("sID", "fID").str.strip_chars() == "")
+    ))
     if len(missing_records):
         if verbose:
             print(f"Found {len(missing_records)} records with missing values.")
@@ -245,5 +259,5 @@ def normalise_dates(
 ) -> pl.DataFrame:
     """Normalises Datetime columns to the number of days past a given reference date"""
     return database.with_columns(
-        *((pl.col(col) - ref_date).dt.seconds() / 60 / 60 / 24 for col in cols)
+        *((pl.col(col) - ref_date).dt.total_seconds() / 60 / 60 / 24 for col in cols)
     )

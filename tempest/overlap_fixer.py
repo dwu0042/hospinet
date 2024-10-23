@@ -44,7 +44,7 @@ def fix_overlaps_single_iter(df: pl.DataFrame):
         .with_columns(
             pl.col("sID", "fID", "Adate", "Ddate")
             .shift(-1)
-            .map_alias(lambda x: f"{x}_next"),
+            .name.map(lambda x: f"{x}_next"),
         )
         # logic for new intervals
         # observation: If we have an overlap between successive intervals, we can update by shifting
@@ -134,7 +134,7 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose=1):
         overlaps = scan_overlaps(df).collect()
         n_ov = overlaps.height
         known_dirty = overlaps.select("sID").to_series()
-        zfs.append(df.filter(pl.col("sID").is_in(known_dirty).is_not()))
+        zfs.append(df.filter(pl.col("sID").is_in(known_dirty).not_()))
         df = df.filter(pl.col("sID").is_in(known_dirty))
         df = fix_overlaps_single_iter(df)
         if verbose:
@@ -152,5 +152,6 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose=1):
             )
         if n_ov == 0:
             break
+    print("History of non-overlapping patient records:")
     print([z.height for z in zfs])
     return pl.concat([*zfs, df])
