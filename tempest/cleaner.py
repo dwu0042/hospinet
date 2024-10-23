@@ -1,5 +1,10 @@
 import polars as pl
+import datetime
+
 from . import overlap_fixer as ovlfxr
+
+from typing import Sequence, Hashable
+from os import PathLike
 
 _nulls = [
     "",
@@ -21,9 +26,9 @@ class DataHandlingError(Exception):
 
 
 def ingest_csv(
-    csv_path,
-    convert_dates=False,
-):
+    csv_path: PathLike | str,
+    convert_dates: bool = False,
+) -> pl.DataFrames:
     return pl.read_csv(
         csv_path, has_header=True, try_parse_dates=convert_dates, null_values=_nulls
     )
@@ -31,20 +36,20 @@ def ingest_csv(
 
 def clean_database(
     database: pl.DataFrame,
-    delete_missing=False,
-    delete_errors=False,
-    convert_dates=False,
-    date_format=r"%Y-%m-%d",
-    subject_id="sID",
-    facility_id="fID",
-    admission_date="Adate",
+    delete_missing: bool = False,
+    delete_errors: bool = False,
+    convert_dates: bool = False,
+    date_format: str = r"%Y-%m-%d",
+    subject_id: str = "sID",
+    facility_id: str = "fID",
+    admission_date: str = "Adate",
     discharge_date="Ddate",
-    subject_dtype=pl.Utf8,
-    facility_dtype=pl.Utf8,
-    retain_auxiliary_data=True,
-    n_iters=100,
-    verbose=True,
-):
+    subject_dtype: pl.DataType = pl.Utf8,
+    facility_dtype: pl.DataType = pl.Utf8,
+    retain_auxiliary_data: bool = True,
+    n_iters: int = 100,
+    verbose: bool = True,
+) -> pl.DataFrame:
     report = standardise_column_names(
         database, subject_id, facility_id, admission_date, discharge_date, verbose
     )
@@ -82,12 +87,12 @@ def clean_database(
 
 def standardise_column_names(
     df: pl.DataFrame,
-    subject_id="sID",
-    facility_id="fID",
-    admission_date="Adate",
-    discharge_date="Ddate",
-    verbose=True,
-):
+    subject_id: str = "sID",
+    facility_id: str = "fID",
+    admission_date: str = "Adate",
+    discharge_date: str = "Ddate",
+    verbose: bool = True,
+) -> pl.DataFrame:
     """Check and standardise column names for further processing"""
 
     # Check column existence
@@ -118,12 +123,12 @@ def standardise_column_names(
 
 def coerce_data_types(
     database: pl.DataFrame,
-    convert_dates=False,
-    date_format=r"%Y-%m-%d",
-    subject_dtype=pl.Utf8,
-    facility_dtype=pl.Utf8,
-    verbose=True,
-):
+    convert_dates: bool = False,
+    date_format: str = r"%Y-%m-%d",
+    subject_dtype: pl.DataType = pl.Utf8,
+    facility_dtype: pl.DataType = pl.Utf8,
+    verbose: bool = True,
+) -> pl.DataFrame:
     # Check data format, column names, variable format, parse dates
     if verbose:
         print("Coercing types...")
@@ -150,7 +155,9 @@ def coerce_data_types(
     return database
 
 
-def clean_missing_values(database: pl.DataFrame, delete_missing=False, verbose=True):
+def clean_missing_values(
+    database: pl.DataFrame, delete_missing: bool = False, verbose: bool = True
+) -> pl.DataFrame:
     """Checks for and potentially deletes recods with missing values"""
     # Check for missing values
     if verbose:
@@ -183,7 +190,9 @@ def clean_missing_values(database: pl.DataFrame, delete_missing=False, verbose=T
     return database
 
 
-def clean_erroneous_records(database: pl.DataFrame, delete_errors=False, verbose=True):
+def clean_erroneous_records(
+    database: pl.DataFrame, delete_errors: bool = False, verbose: bool = True
+) -> pl.DataFrame:
     """Checks for and potnetially deletes records which are erroneous
 
     Erroneous records are when the discharge date is recrded as before the admission date
@@ -211,7 +220,9 @@ def clean_erroneous_records(database: pl.DataFrame, delete_errors=False, verbose
     return database
 
 
-def fix_all_overlaps(database: pl.DataFrame, n_iters=100, verbose=True):
+def fix_all_overlaps(
+    database: pl.DataFrame, n_iters: int = 100, verbose: bool = True
+) -> pl.DataFrame:
     if verbose:
         print("Finding and fixing overlapping records...")
 
@@ -222,3 +233,17 @@ def fix_all_overlaps(database: pl.DataFrame, n_iters=100, verbose=True):
         print(n_overlaps, "overlaps remaining after iterations...")
 
     return database
+
+
+_REF_DATE = datetime.datetime(year=2017, month=3, day=1)
+
+
+def normalise_dates(
+    database: pl.DataFrame,
+    cols: Sequence[Hashable],
+    ref_date: datetime.datetime = _REF_DATE,
+) -> pl.DataFrame:
+    """Normalises Datetime columns to the number of days past a given reference date"""
+    return database.with_columns(
+        *((pl.col(col) - ref_date).dt.seconds() / 60 / 60 / 24 for col in cols)
+    )

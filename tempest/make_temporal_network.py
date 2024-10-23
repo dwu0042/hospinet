@@ -1,16 +1,5 @@
 from .temporal_network import TemporalNetwork
 import polars as pl
-import datetime
-
-_REF_DATE = datetime.datetime(year=2017, month=3, day=1)
-
-def normalise_dates(df: pl.DataFrame, cols, ref_date=_REF_DATE):
-    """Normalises Datetime columns to the number of days past a given reference date"""
-    return df.with_columns(*(
-        (pl.col(col) - ref_date).dt.seconds() /60/60/24
-        for col in cols
-    )
-    )
 
 def convert_presence_to_network(presence: pl.DataFrame, discretisation=1, return_window=365):
     """Converts a Dataframe of presences to a temporal network with base units of days

@@ -1,6 +1,6 @@
 import polars as pl
-from tempest import cleaner
 
+from tempest import cleaner
 
 def test_overall():
     database = cleaner.ingest_csv("fakedb_werr.data.table")
