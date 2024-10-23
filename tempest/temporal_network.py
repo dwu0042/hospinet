@@ -7,7 +7,11 @@ EMPTY_EDGE = {"weight": 0}
 
 
 class TemporalNetwork(nx.DiGraph):
+    """A temporal network for hospital patient transfers"""
+
     def __init__(self, incoming_graph_data=None, **attr):
+        """Create a temporal network that is based on a `networkx.DiGraph`
+        """
         super().__init__(incoming_graph_data, **attr)
 
         self.snapshots = defaultdict(set)
@@ -15,6 +19,10 @@ class TemporalNetwork(nx.DiGraph):
         # self.locations = set()
 
     def add_edge(self, u_of_edge, v_of_edge, **attr):
+        """Add an edge to the temporal network
+        
+        Also see `networkx.DiGraph.add_edge`
+        """
         _super_ret = super().add_edge(u_of_edge, v_of_edge, **attr)
 
         for loc, t in (u_of_edge, v_of_edge):

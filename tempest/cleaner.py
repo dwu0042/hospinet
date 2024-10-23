@@ -22,13 +22,22 @@ _nulls = [
 
 
 class DataHandlingError(Exception):
-    pass
+    """Expected Exception when handling data"""
 
 
 def ingest_csv(
     csv_path: PathLike | str,
     convert_dates: bool = False,
 ) -> pl.DataFrame:
+    """Reads a CSV, with null value interpretation and optional date parsing
+
+    Args:
+        csv_path (PathLike | str): path to the csv to read
+        convert_dates (bool, optional): if True, polars automagically attempts to convert date-like columns. Defaults to False.
+
+    Returns:
+        pl.DataFrame: _description_
+    """    
     return pl.read_csv(
         csv_path, has_header=True, try_parse_dates=convert_dates, null_values=_nulls
     )
@@ -50,6 +59,30 @@ def clean_database(
     n_iters: int = 100,
     verbose: bool = True,
 ) -> pl.DataFrame:
+    """Cleans a database of patient admissions
+    
+    Standardises column names, coerces columns to standard data types,
+    removes missing and erroneous values, and fixes overlapping admissions.
+
+    Args:
+        database (pl.DataFrame): Database (polars dataframe) of patient admissions. Columns should be at least: patient, facility, admission time, discharge time.
+        delete_missing (bool, optional): if True, deletes rows with missing values; otherwise raises an Exception if any rows with missing data are found. Defaults to False.
+        delete_errors (bool, optional): if True, deletes rows with a discharge date before the admission date; otherwise raises an Exception is any such rows are found. Defaults to False.
+        manually_convert_dates (bool, optional): if True, converts admission and discharge date columns from string type to datetime type manually, must be provided with a date_format; if False, does not modify those columns. Defaults to False.
+        date_format (str, optional): date format to expect if manually_convert_dates is True. Defaults to r"%Y-%m-%d".
+        subject_id (str, optional): Column name in the database that corresponds to the patient (subject). Defaults to "sID".
+        facility_id (str, optional): Column name in the database that corresponds to the hospital (facility). Defaults to "fID".
+        admission_date (str, optional): Column name in the database that corresponds to admission date/time. Defaults to "Adate".
+        discharge_date (str, optional): Column name in the database that corresponds to discharge date/time. Defaults to "Ddate".
+        subject_dtype (pl.DataType, optional): Polars datatype to coerce patient IDs to. Defaults to pl.Utf8.
+        facility_dtype (pl.DataType, optional): Polars datatype to coerce hospital IDs to. Defaults to pl.Utf8.
+        retain_auxiliary_data (bool, optional): if True, retains columns that are not subject, facility, admission and discharge dates; otherwise drops those columns. Defaults to True.
+        n_iters (int, optional): Maximum number of iterations of overlap fixing. Defaults to 100.
+        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
+
+    Returns:
+        pl.DataFrame: Cleaned database
+    """    
 
     database = standardise_column_names(
         database=database, 
@@ -207,9 +240,9 @@ def clean_missing_values(
 def clean_erroneous_records(
     database: pl.DataFrame, delete_errors: bool = False, verbose: bool = True
 ) -> pl.DataFrame:
-    """Checks for and potnetially deletes records which are erroneous
+    """Checks for and potentially deletes records which are erroneous
 
-    Erroneous records are when the discharge date is recrded as before the admission date
+    Erroneous records are when the discharge date is recorded as before the admission date
     """
     if verbose:
         print("Checking for erroneous records...")
