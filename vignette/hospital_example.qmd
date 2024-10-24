@@ -11,9 +11,9 @@ jupyter: python3
 
 Here, we will clean and process a small database into a temporal network of patient transfers.
 
-All the functionality is provided in the `tempest` library.
+All the functionality is provided in the `hospinet` library.
 ```{python}
-import tempest
+import hospinet
 
 import polars as pl
 import networkx as nx
@@ -22,14 +22,14 @@ from matplotlib import pyplot as plt # for later
 ```
 
 
-We load the database (in the form of a csv), and clean it using the `tempest.cleaner` submodule. We specify the column names, since they are different from the (standardised) default.
+We load the database (in the form of a csv), and clean it using the `hospinet.cleaner` submodule. We specify the column names, since they are different from the (standardised) default.
 ```{python}
-source_db = tempest.cleaner.ingest_csv("./data/admissions.csv", convert_dates=True)
+source_db = hospinet.cleaner.ingest_csv("./data/admissions.csv", convert_dates=True)
 source_db.head(5)
 ```
 
 ```{python}
-cleaned_db = tempest.cleaner.clean_database(
+cleaned_db = hospinet.cleaner.clean_database(
     source_db,
     delete_missing="record",
     delete_errors="record",
@@ -41,7 +41,7 @@ cleaned_db = tempest.cleaner.clean_database(
 )
 # encode dates to numerics
 first_date = cleaned_db.select(pl.col('Adate').min()).item()
-numeric_db = tempest.cleaner.normalise_dates(
+numeric_db = hospinet.cleaner.normalise_dates(
     cleaned_db,
     cols = ['Adate', 'Ddate'],
     ref_date = first_date
@@ -51,7 +51,7 @@ numeric_db = tempest.cleaner.normalise_dates(
 We can then process this into a TemporalNetwork object directly using the `from_presence` class method
 
 ```{python}
-network = tempest.TemporalNetwork.from_presence(
+network = hospinet.TemporalNetwork.from_presence(
     numeric_db,
     discretisation=1,
 )

@@ -4,3 +4,34 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "hospinet"
+version = "1.0.0"
+description = "Temporal Networks of Hospitals Using Patient Transfers"
+authors = [{name = "David Wu", email="david.wu1@monash.edu"}]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy >= 1.19.0",
+    "polars >= 1.0",
+    "networkx >= 3",
+]
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/dwu0042/tempest"
+Issues = "https://github.com/dwu0042/tempest/issues"
+
+
+[project.optional-dependencies]
+dev = ["pytest"]
+vignette = ["matplotlib >= 3.6"]
+docs = ["pdoc3"]
+
+[tool.setuptools]
+packages = ["hospinet"]

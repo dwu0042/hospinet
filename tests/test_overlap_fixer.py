@@ -1,4 +1,4 @@
-from tempest import overlap_fixer as ovlfxr
+from hospinet import overlap_fixer as ovlfxr
 import polars as pl
 from datetime import datetime
 
