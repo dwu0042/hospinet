@@ -4,9 +4,9 @@ from time import perf_counter as tic
 
 def scan_overlaps(df: pl.DataFrame) -> pl.LazyFrame:
     """Constructs a query that can resolve to the overlaps present in the given dataframe
-    
+
     Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
-    
+
     Args:
         df (pl.DataFrame): Database to scan for overlaps
 
@@ -29,7 +29,7 @@ def scan_overlaps(df: pl.DataFrame) -> pl.LazyFrame:
 
 def num_overlaps(df: pl.DataFrame) -> int:
     """Get the number of overlaps in a dataframe
-    
+
     Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
 
     Args:
@@ -55,11 +55,11 @@ def fix_overlaps_single_iter(df: pl.DataFrame) -> pl.DataFrame:
         - we move the Ddate of the left interval back
         - we create a new interval from the right Ddate to the left Ddate
 
-    This single iteration does not necessarily fix all overlaps. 
+    This single iteration does not necessarily fix all overlaps.
 
     Args:
         df (pl.DataFrame): Dataframe to fix overlaps in
-    
+
     Returns:
         pl.DataFrame: Dataframe with one iteration of overlap fixes
 
@@ -164,10 +164,12 @@ def fix_overlaps_single_iter(df: pl.DataFrame) -> pl.DataFrame:
     return fixed_frame.collect()
 
 
-def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose: bool=True) -> pl.DataFrame:
+def fix_overlaps(
+    df: pl.DataFrame, iters: int = 1, verbose: bool = True
+) -> pl.DataFrame:
     """Fixes overlapping patient records in the given database
 
-    
+
     Also see `fix_overlaps_single_iter` for the overlap correction logic
 
     Args:
@@ -188,7 +190,9 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose: bool=True) -> pl.Dat
         overlaps = scan_overlaps(df).collect()
         n_overlaps = overlaps.height
         patients_with_overlaps = overlaps.select("sID").to_series()
-        clean_records.append(df.filter(pl.col("sID").is_in(patients_with_overlaps).not_()))
+        clean_records.append(
+            df.filter(pl.col("sID").is_in(patients_with_overlaps).not_())
+        )
         df = df.filter(pl.col("sID").is_in(patients_with_overlaps))
         df = fix_overlaps_single_iter(df)
         if verbose:

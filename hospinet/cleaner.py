@@ -37,7 +37,7 @@ def ingest_csv(
 
     Returns:
         pl.DataFrame: _description_
-    """    
+    """
     return pl.read_csv(
         csv_path, has_header=True, try_parse_dates=convert_dates, null_values=_nulls
     )
@@ -60,7 +60,7 @@ def clean_database(
     verbose: bool = True,
 ) -> pl.DataFrame:
     """Cleans a database of patient admissions
-    
+
     Standardises column names, coerces columns to standard data types,
     removes missing and erroneous values, and fixes overlapping admissions.
 
@@ -82,23 +82,23 @@ def clean_database(
 
     Returns:
         pl.DataFrame: Cleaned database
-    """    
+    """
 
     database = standardise_column_names(
-        database=database, 
-        subject_id=subject_id, 
-        facility_id=facility_id, 
-        admission_date=admission_date, 
-        discharge_date=discharge_date, 
+        database=database,
+        subject_id=subject_id,
+        facility_id=facility_id,
+        admission_date=admission_date,
+        discharge_date=discharge_date,
         verbose=verbose,
     )
 
     database = coerce_data_types(
-        database=database, 
-        manually_convert_dates=manually_convert_dates, 
-        date_format=date_format, 
-        subject_dtype=subject_dtype, 
-        facility_dtype=facility_dtype, 
+        database=database,
+        manually_convert_dates=manually_convert_dates,
+        date_format=date_format,
+        subject_dtype=subject_dtype,
+        facility_dtype=facility_dtype,
         verbose=verbose,
     )
 
@@ -110,15 +110,15 @@ def clean_database(
 
     # Check and clean missing values
     database = clean_missing_values(
-        database=database, 
-        delete_missing=delete_missing, 
+        database=database,
+        delete_missing=delete_missing,
         verbose=verbose,
     )
 
     # Check erroneous records
     database = clean_erroneous_records(
-        database=database, 
-        delete_errors=delete_errors, 
+        database=database,
+        delete_errors=delete_errors,
         verbose=verbose,
     )
 
@@ -203,7 +203,7 @@ def coerce_data_types(
 
     Returns:
         pl.DataFrame: Database with normalised column datatypes
-    """    
+    """
     # Check data format, column names, variable format, parse dates
     if verbose:
         print("Coercing types...")
@@ -229,7 +229,7 @@ def coerce_data_types(
 
 
 def clean_missing_values(
-    database: pl.DataFrame, delete_missing: str|bool = False, verbose: bool = True
+    database: pl.DataFrame, delete_missing: str | bool = False, verbose: bool = True
 ) -> pl.DataFrame:
     """Checks for and potentially deletes records with missing values
 
@@ -240,18 +240,20 @@ def clean_missing_values(
 
     Raises:
         DataHandlingError: if delete_missing was set to False and missing records were found.
-        ValueError: if an unknown delete_missing argument is provided 
+        ValueError: if an unknown delete_missing argument is provided
 
     Returns:
         pl.DataFrame: Database with missing values fixed
-    """    
+    """
     # Check for missing values
     if verbose:
         print("Checking for missing values...")
-    missing_records = database.filter((
-        pl.any_horizontal(pl.all().is_null()) 
-        | pl.any_horizontal(pl.col("sID", "fID").str.strip_chars() == "")
-    ))
+    missing_records = database.filter(
+        (
+            pl.any_horizontal(pl.all().is_null())
+            | pl.any_horizontal(pl.col("sID", "fID").str.strip_chars() == "")
+        )
+    )
     if len(missing_records):
         if verbose:
             print(f"Found {len(missing_records)} records with missing values.")
@@ -279,7 +281,7 @@ def clean_missing_values(
 
 
 def clean_erroneous_records(
-    database: pl.DataFrame, delete_errors: str|bool = False, verbose: bool = True
+    database: pl.DataFrame, delete_errors: str | bool = False, verbose: bool = True
 ) -> pl.DataFrame:
     """Checks for and potentially deletes records which are erroneous
 
@@ -296,7 +298,7 @@ def clean_erroneous_records(
 
     Returns:
         pl.DataFrame: Database with erroneous records fixed
-    """    
+    """
     if verbose:
         print("Checking for erroneous records...")
     erroneous_records = database.filter(pl.col("Adate") > pl.col("Ddate"))
@@ -342,7 +344,7 @@ def fix_all_overlaps(
 
     Returns:
         pl.DataFrame: Database with overlaps corrected
-    """    
+    """
     if verbose:
         print("Finding and fixing overlapping records...")
 
@@ -366,13 +368,13 @@ def normalise_dates(
     """Normalises given Datetime columns to the number of days past a given reference date
 
     Args:
-        database (pl.DataFrame): Database (polars dataframe) to be normalised 
+        database (pl.DataFrame): Database (polars dataframe) to be normalised
         cols (Sequence[Hashable]): Column names of the datetime columns to convert from datetime to numeric (number of days past ref date)
         ref_date (datetime.datetime, optional): Reference date to normalise datetimes against. Defaults to 1 March 2017 00:00.
 
     Returns:
         pl.DataFrame: Database with the given columns normalised
-    """    
+    """
     """"""
     return database.with_columns(
         *((pl.col(col) - ref_date).dt.total_seconds() / 60 / 60 / 24 for col in cols)
