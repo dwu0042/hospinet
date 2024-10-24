@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hospinet"
-version = "1.0.0"
+version = "1.0.1"
 description = "Temporal Networks of Hospitals Using Patient Transfers"
 readme = "README.md"
 authors = [{name = "David Wu", email="david.wu1@monash.edu"}]
