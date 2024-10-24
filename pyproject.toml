@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=61.0",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
@@ -9,6 +9,7 @@ build-backend = "setuptools.build_meta"
 name = "hospinet"
 version = "1.0.0"
 description = "Temporal Networks of Hospitals Using Patient Transfers"
+readme = "README.md"
 authors = [{name = "David Wu", email="david.wu1@monash.edu"}]
 license = { file = "LICENSE" }
 classifiers = [
@@ -24,8 +25,8 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.urls]
-Homepage = "https://github.com/dwu0042/tempest"
-Issues = "https://github.com/dwu0042/tempest/issues"
+Homepage = "https://github.com/dwu0042/hospinet"
+Issues = "https://github.com/dwu0042/hospinet/issues"
 
 
 [project.optional-dependencies]
