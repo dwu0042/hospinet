@@ -2,8 +2,17 @@ import polars as pl
 from time import perf_counter as tic
 
 
-def scan_overlaps(df: pl.DataFrame):
-    """Creates a LazyFrame of the overlaps present in teh dataframe"""
+def scan_overlaps(df: pl.DataFrame) -> pl.LazyFrame:
+    """Constructs a query that can resolve to the overlaps present in the given dataframe
+    
+    Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
+    
+    Args:
+        df (pl.DataFrame): Database to scan for overlaps
+
+    Returns:
+        pl.LazyFrame: Query that can be .collect() -ed to return a dataframe of overlaps
+    """
     overlaps = (
         df.lazy()
         # ensure sorted
@@ -18,12 +27,43 @@ def scan_overlaps(df: pl.DataFrame):
     return overlaps
 
 
-def num_overlaps(df: pl.DataFrame):
+def num_overlaps(df: pl.DataFrame) -> int:
+    """Get the number of overlaps in a dataframe
+    
+    Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
+
+    Args:
+        df (pl.DataFrame): Database to scan for overlaps
+
+    Returns:
+        int: number of overlapping records
+
+    """
     return scan_overlaps(df).collect().height
 
 
-def fix_overlaps_single_iter(df: pl.DataFrame):
-    """Performs one iteration of overlap correction on successive presence events"""
+def fix_overlaps_single_iter(df: pl.DataFrame) -> pl.DataFrame:
+    """Performs one iteration of overlap correction on successive presence events
+
+    For two successive admissions of a patient (as sorted by Adate) we have 4 cases:
+
+    1. The left and right intervals do not overlap (left Ddate < right Adate)
+        - no fix is needed
+    2. The left Ddate is after the Adate of the right interval, but before the right Ddate
+        - we move the Ddate of the left interval back
+    3. The left Ddate is after the right Ddate (one interval completely encapsulates the other)
+        - we move the Ddate of the left interval back
+        - we create a new interval from the right Ddate to the left Ddate
+
+    This single iteration does not necessarily fix all overlaps. 
+
+    Args:
+        df (pl.DataFrame): Dataframe to fix overlaps in
+    
+    Returns:
+        pl.DataFrame: Dataframe with one iteration of overlap fixes
+
+    """
 
     # expression to filter out non-overlaps (assigns nulls)
     reject_no_overlaps = (
@@ -66,7 +106,7 @@ def fix_overlaps_single_iter(df: pl.DataFrame):
                 .when(pl.col("Adate_next").gt(pl.col("Adate")))
                 .then(pl.col("Adate_next"))
             ).alias("Adate_next_new"),
-            # a new row for encapsualted intervals
+            # a new row for encapsulated intervals
             (
                 reject_no_overlaps.when(pl.col("Ddate") > pl.col("Ddate_next")).then(
                     pl.col("Ddate_next")
@@ -83,7 +123,7 @@ def fix_overlaps_single_iter(df: pl.DataFrame):
         # shift back Adate_next
         .with_columns(pl.col("Adate_next_new").shift(1))
         # Update the Adate and Ddate columns appropriately
-        # If the corr. _new col is not null, use it, other wise don't
+        # If the corr. _new col is not null, use it, otherwise don't
         .with_columns(
             (
                 pl.when(pl.col("Ddate_new").is_not_null())
@@ -124,35 +164,50 @@ def fix_overlaps_single_iter(df: pl.DataFrame):
     return fixed_frame.collect()
 
 
-def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose=1):
-    _t = 0
-    if verbose:
-        _t = tic()
+def fix_overlaps(df: pl.DataFrame, iters: int = 1, verbose: bool=True) -> pl.DataFrame:
+    """Fixes overlapping patient records in the given database
 
-    zfs = []
-    for _i in range(iters):
+    
+    Also see `fix_overlaps_single_iter` for the overlap correction logic
+
+    Args:
+        df (pl.DataFrame): Database with overlaps to fix
+        iters (int, optional): Number of iterations to run. Defaults to 1.
+        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
+
+    Returns:
+        pl.DataFrame: Database with overlaps fixed
+    """
+
+    timer_start = 0
+    if verbose:
+        timer_start = tic()
+
+    clean_records = []
+    for iteration in range(iters):
         overlaps = scan_overlaps(df).collect()
-        n_ov = overlaps.height
-        known_dirty = overlaps.select("sID").to_series()
-        zfs.append(df.filter(pl.col("sID").is_in(known_dirty).not_()))
-        df = df.filter(pl.col("sID").is_in(known_dirty))
+        n_overlaps = overlaps.height
+        patients_with_overlaps = overlaps.select("sID").to_series()
+        clean_records.append(df.filter(pl.col("sID").is_in(patients_with_overlaps).not_()))
+        df = df.filter(pl.col("sID").is_in(patients_with_overlaps))
         df = fix_overlaps_single_iter(df)
         if verbose:
-            _t0, _t = _t, tic()
+            timer_old, timer_start = timer_start, tic()
             print(
                 "Iteration",
-                _i,
+                iteration,
                 ":",
                 df.height,
                 "entries;",
-                n_ov,
+                n_overlaps,
                 "overlaps;",
-                _t - _t0,
+                timer_start - timer_old,
                 "s",
             )
-        if n_ov == 0:
+        if n_overlaps == 0:
             break
     if verbose:
         print("History of non-overlapping patient records:")
-        print([z.height for z in zfs])
-    return pl.concat([*zfs, df])
+        print([z.height for z in clean_records])
+    # join the clean and corrected records
+    return pl.concat([*clean_records, df])
