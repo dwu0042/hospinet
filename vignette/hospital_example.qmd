@@ -31,8 +31,8 @@ source_db.head(5)
 ```{python}
 cleaned_db = tempest.cleaner.clean_database(
     source_db,
-    delete_missing=True,
-    delete_errors=True,
+    delete_missing="record",
+    delete_errors="record",
     subject_id = 'patient',
     facility_id = 'hospital',
     admission_date = 'admission',

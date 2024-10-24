@@ -116,7 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>Here, we will clean and process a small database into a temporal network of patient transfers.</p>
 <p>All the functionality is provided in the <code>tempest</code> library.</p>
-<div id="ff36b0a2" class="cell" data-execution_count="1">
+<div id="7facfea8" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tempest</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
@@ -125,10 +125,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> pyplot <span class="im">as</span> plt <span class="co"># for later</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We load the database (in the form of a csv), and clean it using the <code>tempest.cleaner</code> submodule. We specify the column names, since they are different from the (standardised) default.</p>
-<div id="aced188a" class="cell" data-execution_count="2">
+<div id="fc28eb9c" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>source_db <span class="op">=</span> tempest.cleaner.ingest_csv(<span class="st">"./data/admissions.csv"</span>, convert_dates<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>source_db.head(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="25">
+<div class="cell-output cell-output-display" data-execution_count="8">
 <div><style>
 .dataframe > thead > tr,
 .dataframe > tbody > tr {
@@ -188,11 +188,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="f9931176" class="cell" data-execution_count="3">
+<div id="194ec799" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>cleaned_db <span class="op">=</span> tempest.cleaner.clean_database(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    source_db,</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    delete_missing<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    delete_errors<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    delete_missing<span class="op">=</span><span class="st">"record"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    delete_errors<span class="op">=</span><span class="st">"record"</span>,</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    subject_id <span class="op">=</span> <span class="st">'patient'</span>,</span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    facility_id <span class="op">=</span> <span class="st">'hospital'</span>,</span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    admission_date <span class="op">=</span> <span class="st">'admission'</span>,</span>
@@ -216,56 +216,56 @@ Checking for missing values...
 Checking for erroneous records...
 Removing duplicate records...
 Finding and fixing overlapping records...
-Iteration 0 : 144 entries; 92 overlaps; 0.007299915014300495 s
-Iteration 1 : 171 entries; 62 overlaps; 0.008561898954212666 s
-Iteration 2 : 194 entries; 50 overlaps; 0.005988132033962756 s
-Iteration 3 : 215 entries; 44 overlaps; 0.008135554962791502 s
-Iteration 4 : 234 entries; 38 overlaps; 0.007631985004991293 s
-Iteration 5 : 250 entries; 34 overlaps; 0.008244513010140508 s
-Iteration 6 : 265 entries; 32 overlaps; 0.007537175028119236 s
-Iteration 7 : 276 entries; 28 overlaps; 0.008801021962426603 s
-Iteration 8 : 286 entries; 21 overlaps; 0.007557898003142327 s
-Iteration 9 : 294 entries; 18 overlaps; 0.007881719036959112 s
-Iteration 10 : 302 entries; 16 overlaps; 0.009806671005208045 s
-Iteration 11 : 310 entries; 16 overlaps; 0.008982408966403455 s
-Iteration 12 : 317 entries; 15 overlaps; 0.00693379802396521 s
-Iteration 13 : 324 entries; 14 overlaps; 0.007235409982968122 s
-Iteration 14 : 330 entries; 13 overlaps; 0.008358924998901784 s
-Iteration 15 : 335 entries; 12 overlaps; 0.008743863028939813 s
-Iteration 16 : 339 entries; 9 overlaps; 0.008534744963981211 s
-Iteration 17 : 243 entries; 7 overlaps; 0.010322851012460887 s
-Iteration 18 : 188 entries; 5 overlaps; 0.008782727993093431 s
-Iteration 19 : 120 entries; 4 overlaps; 0.008464918995741755 s
-Iteration 20 : 122 entries; 4 overlaps; 0.005348264006897807 s
-Iteration 21 : 123 entries; 3 overlaps; 0.006946798996068537 s
-Iteration 22 : 124 entries; 2 overlaps; 0.006337250000797212 s
-Iteration 23 : 125 entries; 2 overlaps; 0.007905634003691375 s
-Iteration 24 : 126 entries; 2 overlaps; 0.007373388973064721 s
-Iteration 25 : 127 entries; 2 overlaps; 0.008061321044806391 s
-Iteration 26 : 128 entries; 2 overlaps; 0.008252192987129092 s
-Iteration 27 : 129 entries; 2 overlaps; 0.007335672969929874 s
-Iteration 28 : 130 entries; 2 overlaps; 0.008131024020258337 s
-Iteration 29 : 131 entries; 2 overlaps; 0.007946341997012496 s
-Iteration 30 : 132 entries; 2 overlaps; 0.007470854034181684 s
-Iteration 31 : 133 entries; 2 overlaps; 0.007654637971427292 s
-Iteration 32 : 134 entries; 2 overlaps; 0.008287652977742255 s
-Iteration 33 : 135 entries; 2 overlaps; 0.007365594035945833 s
-Iteration 34 : 135 entries; 1 overlaps; 0.0070709469728171825 s
-Iteration 35 : 0 entries; 0 overlaps; 0.0072800450143404305 s
+Iteration 0 : 144 entries; 92 overlaps; 0.007872525951825082 s
+Iteration 1 : 171 entries; 62 overlaps; 0.008591202087700367 s
+Iteration 2 : 194 entries; 50 overlaps; 0.008153405971825123 s
+Iteration 3 : 215 entries; 44 overlaps; 0.008904722984880209 s
+Iteration 4 : 234 entries; 38 overlaps; 0.006517061963677406 s
+Iteration 5 : 250 entries; 34 overlaps; 0.008196474052965641 s
+Iteration 6 : 265 entries; 32 overlaps; 0.007419492932967842 s
+Iteration 7 : 276 entries; 28 overlaps; 0.006715078023262322 s
+Iteration 8 : 286 entries; 21 overlaps; 0.007969898055307567 s
+Iteration 9 : 294 entries; 18 overlaps; 0.007235803990624845 s
+Iteration 10 : 302 entries; 16 overlaps; 0.007463446934707463 s
+Iteration 11 : 310 entries; 16 overlaps; 0.00967032101470977 s
+Iteration 12 : 317 entries; 15 overlaps; 0.008420704980380833 s
+Iteration 13 : 324 entries; 14 overlaps; 0.0069986090529710054 s
+Iteration 14 : 330 entries; 13 overlaps; 0.007961918017826974 s
+Iteration 15 : 335 entries; 12 overlaps; 0.007197416969574988 s
+Iteration 16 : 339 entries; 9 overlaps; 0.007266329019330442 s
+Iteration 17 : 243 entries; 7 overlaps; 0.007948430953547359 s
+Iteration 18 : 188 entries; 5 overlaps; 0.00927474198397249 s
+Iteration 19 : 120 entries; 4 overlaps; 0.007469705073162913 s
+Iteration 20 : 122 entries; 4 overlaps; 0.007333768997341394 s
+Iteration 21 : 123 entries; 3 overlaps; 0.006281635025516152 s
+Iteration 22 : 124 entries; 2 overlaps; 0.007497522979974747 s
+Iteration 23 : 125 entries; 2 overlaps; 0.0078075629426166415 s
+Iteration 24 : 126 entries; 2 overlaps; 0.0074644850101321936 s
+Iteration 25 : 127 entries; 2 overlaps; 0.006683369050733745 s
+Iteration 26 : 128 entries; 2 overlaps; 0.0067047609481960535 s
+Iteration 27 : 129 entries; 2 overlaps; 0.008705324959009886 s
+Iteration 28 : 130 entries; 2 overlaps; 0.006479166098870337 s
+Iteration 29 : 131 entries; 2 overlaps; 0.007158868946135044 s
+Iteration 30 : 132 entries; 2 overlaps; 0.006508582970127463 s
+Iteration 31 : 133 entries; 2 overlaps; 0.006538685993291438 s
+Iteration 32 : 134 entries; 2 overlaps; 0.008222184027545154 s
+Iteration 33 : 135 entries; 2 overlaps; 0.007434805971570313 s
+Iteration 34 : 135 entries; 1 overlaps; 0.00779325608164072 s
+Iteration 35 : 0 entries; 0 overlaps; 0.007501208921894431 s
 History of non-overlapping patient records:
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 57, 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 135]
 0 overlaps remaining after iterations...</code></pre>
 </div>
 </div>
 <p>We can then process this into a TemporalNetwork object directly using the <code>from_presence</code> class method</p>
-<div id="cda90bad" class="cell" data-execution_count="4">
+<div id="07d028c5" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>network <span class="op">=</span> tempest.TemporalNetwork.from_presence(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    numeric_db,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    discretisation<span class="op">=</span><span class="dv">1</span>,</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This object is also a <code>networkx.DiGraph</code> object, so we can use the native plotting functionality. We project this down to static nodes first, so that we don’t get the full temporal graph.</p>
-<div id="567873a6" class="cell" data-execution_count="5">
+<div id="9bf4aa8d" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>static_network <span class="op">=</span> network.to_static()</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>pos <span class="op">=</span> nx.spring_layout(static_network, seed<span class="op">=</span><span class="dv">1451</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>edge_labels <span class="op">=</span> {</span>
@@ -289,11 +289,11 @@ History of non-overlapping patient records:
 </div>
 </div>
 <p>We provide some basic indexing support via methods:</p>
-<div id="1cf9372b" class="cell" data-execution_count="6">
+<div id="c667deac" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Nodes with presence at time 15: "</span>, network.nodes_at_time(<span class="dv">15</span>))</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"When hospital D is occupied: "</span>, network.when_present(<span class="st">'D'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Nodes with presence at time 15:  [('B', 15), ('E', 15)]
+<pre><code>Nodes with presence at time 15:  [('E', 15), ('B', 15)]
 When hospital D is occupied:  [('D', 0), ('D', 1), ('D', 2), ('D', 3), ('D', 4), ('D', 5), ('D', 6), ('D', 7), ('D', 8), ('D', 9), ('D', 10), ('D', 11), ('D', 12), ('D', 13), ('D', 38), ('D', 39), ('D', 40), ('D', 41), ('D', 42), ('D', 43), ('D', 44), ('D', 45), ('D', 46), ('D', 47), ('D', 48), ('D', 49), ('D', 50), ('D', 51), ('D', 52), ('D', 53), ('D', 54), ('D', 55), ('D', 56), ('D', 57), ('D', 58), ('D', 59), ('D', 71), ('D', 72), ('D', 73), ('D', 74), ('D', 75), ('D', 76), ('D', 77), ('D', 78), ('D', 79), ('D', 80), ('D', 81), ('D', 82), ('D', 83), ('D', 84), ('D', 85), ('D', 86), ('D', 87), ('D', 88), ('D', 89), ('D', 90), ('D', 91), ('D', 92), ('D', 93), ('D', 94), ('D', 95), ('D', 96), ('D', 97), ('D', 98), ('D', 99), ('D', 100), ('D', 101), ('D', 102), ('D', 103), ('D', 113), ('D', 114), ('D', 115), ('D', 116), ('D', 117), ('D', 118), ('D', 119), ('D', 120), ('D', 121), ('D', 122), ('D', 123), ('D', 124), ('D', 125), ('D', 126), ('D', 127), ('D', 128), ('D', 129), ('D', 130), ('D', 131), ('D', 132), ('D', 133), ('D', 134), ('D', 135), ('D', 136), ('D', 137), ('D', 138), ('D', 139), ('D', 140), ('D', 141), ('D', 142), ('D', 143), ('D', 144), ('D', 145), ('D', 146), ('D', 147), ('D', 148), ('D', 149), ('D', 150), ('D', 151), ('D', 152), ('D', 153), ('D', 154), ('D', 155), ('D', 156), ('D', 157), ('D', 158), ('D', 159), ('D', 160), ('D', 175), ('D', 181), ('D', 182), ('D', 183), ('D', 184), ('D', 185), ('D', 186), ('D', 187), ('D', 188), ('D', 189), ('D', 190), ('D', 191), ('D', 192), ('D', 193), ('D', 194), ('D', 195), ('D', 196), ('D', 197), ('D', 198), ('D', 199), ('D', 200), ('D', 201), ('D', 202), ('D', 203), ('D', 204), ('D', 205), ('D', 206), ('D', 207), ('D', 208), ('D', 209), ('D', 210), ('D', 211), ('D', 212), ('D', 213), ('D', 214), ('D', 215), ('D', 216), ('D', 217), ('D', 218), ('D', 219), ('D', 220), ('D', 221), ('D', 222), ('D', 223), ('D', 224), ('D', 225), ('D', 226), ('D', 227), ('D', 228), ('D', 229), ('D', 230), ('D', 231), ('D', 232), ('D', 233), ('D', 234), ('D', 235), ('D', 236), ('D', 237), ('D', 238), ('D', 239), ('D', 240), ('D', 241), ('D', 242), ('D', 243), ('D', 244), ('D', 245), ('D', 246), ('D', 247), ('D', 248), ('D', 249), ('D', 250), ('D', 251), ('D', 252), ('D', 253), ('D', 254), ('D', 255), ('D', 256), ('D', 257), ('D', 258), ('D', 259), ('D', 260), ('D', 261), ('D', 262), ('D', 263), ('D', 264), ('D', 265), ('D', 266), ('D', 267), ('D', 268), ('D', 269), ('D', 270), ('D', 271), ('D', 272), ('D', 278), ('D', 292), ('D', 293), ('D', 294), ('D', 295), ('D', 296), ('D', 297), ('D', 298), ('D', 299), ('D', 300), ('D', 301), ('D', 302), ('D', 303), ('D', 304), ('D', 305), ('D', 306), ('D', 307), ('D', 308), ('D', 309), ('D', 310), ('D', 311), ('D', 312), ('D', 313), ('D', 314), ('D', 315), ('D', 316), ('D', 317), ('D', 318), ('D', 319), ('D', 320), ('D', 321), ('D', 322), ('D', 323), ('D', 324), ('D', 325), ('D', 326), ('D', 327), ('D', 328), ('D', 329), ('D', 330), ('D', 345), ('D', 346), ('D', 347), ('D', 348), ('D', 349), ('D', 350), ('D', 351), ('D', 352), ('D', 353), ('D', 355), ('D', 356), ('D', 357), ('D', 358), ('D', 359), ('D', 376), ('D', 377), ('D', 378), ('D', 379), ('D', 380), ('D', 381), ('D', 382), ('D', 383), ('D', 384), ('D', 385), ('D', 386), ('D', 387), ('D', 388), ('D', 389), ('D', 390), ('D', 391), ('D', 392), ('D', 393), ('D', 394), ('D', 395), ('D', 396), ('D', 397), ('D', 398), ('D', 399), ('D', 400), ('D', 401), ('D', 402), ('D', 403), ('D', 404), ('D', 405), ('D', 406), ('D', 407), ('D', 408), ('D', 409), ('D', 410), ('D', 411), ('D', 412), ('D', 413), ('D', 414), ('D', 415), ('D', 416), ('D', 417), ('D', 418), ('D', 419), ('D', 420), ('D', 421), ('D', 422), ('D', 423), ('D', 424), ('D', 425), ('D', 426), ('D', 427), ('D', 428), ('D', 429), ('D', 430), ('D', 431), ('D', 432), ('D', 433), ('D', 434), ('D', 435), ('D', 436), ('D', 437), ('D', 438), ('D', 439), ('D', 440), ('D', 441), ('D', 442), ('D', 443), ('D', 444), ('D', 445)]</code></pre>
 </div>
 </div>
