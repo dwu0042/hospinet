@@ -240,7 +240,6 @@ def clean_missing_values(
 
     Raises:
         DataHandlingError: if delete_missing was set to False and missing records were found.
-        ValueError: if an unknown delete_missing argument is provided
 
     Returns:
         pl.DataFrame: Database with missing values fixed
@@ -294,7 +293,6 @@ def clean_erroneous_records(
 
     Raises:
         DataHandlingError: if delete_errors is False, and any erroneous records are found.
-        ValueError: if an unknown value for delete_errors was provided
 
     Returns:
         pl.DataFrame: Database with erroneous records fixed
