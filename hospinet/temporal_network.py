@@ -1,7 +1,11 @@
 import polars as pl
 import networkx as nx
+
 from collections import defaultdict
+
 from typing import SupportsFloat as Numeric
+from os import PathLike
+
 
 EMPTY_EDGE = {"weight": 0}
 
@@ -148,3 +152,30 @@ class TemporalNetwork(nx.DiGraph):
         )
 
         return G
+
+    def write_graphml(self, outfile: str | PathLike, *args, **kwargs):
+        """Write the temporal network to a graphml format file
+
+        Args:
+            outfile (str | PathLike): Path to write file to
+            *args: positional arguments to pass to `networkx.write_graphml`
+            **kwargs: keyword arguments to pass to `networkx.write_graphml`
+        """
+        nx.write_graphml(self, outfile, *args, **kwargs)
+
+    def write_lgl(self, outfile: str | PathLike, weight="weight"):
+        """Write the temporal network out to an lgl-style file
+
+        Args:
+            outfile (str | Pathlike): Path to write file to
+            weight (str, optional): Edge attribute to use as weight column in lgl format. If this attribute does not exist for an edge, replaces with empty
+        """
+
+        # instead of using networkx.write_weighted_edgelist
+        # we do this to customise the printing of the tuple-nodes:
+        # they otherwise would have whitespace, which breaks the lgl format
+        with open(outfile, "w") as fp:
+            for (loc_from, time_from), (loc_to, time_to), attr_dict in nx.to_edgelist(self):
+                fp.write(
+                    f"""({loc_from},{time_from}) ({loc_to},{time_to}) {attr_dict.get(weight)}\n"""
+                )
