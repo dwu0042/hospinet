@@ -1,4 +1,7 @@
+"""This submodule provides utility functions to the `cleaner` submodule to correct overlapping patient admissions"""
+
 import polars as pl
+
 from time import perf_counter as tic
 
 

@@ -22,7 +22,7 @@ dependencies = [
     "polars >= 1.0",
     "networkx >= 3",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.urls]
 Homepage = "https://github.com/dwu0042/hospinet"

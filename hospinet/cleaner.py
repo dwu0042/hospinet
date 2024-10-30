@@ -1,5 +1,8 @@
-import polars as pl
+"""This submodule provides utilities for validating and correcting a database of patient admissions."""
+
 import datetime
+
+import polars as pl
 
 from . import overlap_fixer as ovlfxr
 
@@ -36,7 +39,7 @@ def ingest_csv(
         convert_dates (bool, optional): if True, polars automagically attempts to convert date-like columns. Defaults to False.
 
     Returns:
-        pl.DataFrame: _description_
+        pl.DataFrame: Dataframe representing the ingested csv
     """
     return pl.read_csv(
         csv_path, has_header=True, try_parse_dates=convert_dates, null_values=_nulls

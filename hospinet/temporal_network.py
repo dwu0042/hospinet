@@ -1,9 +1,11 @@
+"""This submodule defines the TemporalNetwork class that represents a flattened time-discretised version of patient transfers"""
+
 import polars as pl
 import networkx as nx
 
 from collections import defaultdict
 
-from typing import SupportsFloat as Numeric
+from typing import SupportsFloat, Hashable, Self, Sequence, Any
 from os import PathLike
 
 
@@ -13,18 +15,31 @@ EMPTY_EDGE = {"weight": 0}
 class TemporalNetwork(nx.DiGraph):
     """A temporal network for hospital patient transfers"""
 
-    def __init__(self, incoming_graph_data=None, **attr):
-        """Create a temporal network that is based on a `networkx.DiGraph`"""
+    def __init__(self, incoming_graph_data=None, **attr) -> None:
+        """Create a temporal network that is based on a `networkx.DiGraph`
+
+        Adds the internal snapshots and present lookup dictionaries to the base construction
+
+        Args:
+            incoming_graph_data (optional): Graph data to parse by networkx
+            **attr: Graph attributes to pass to networkx constructor
+        """
         super().__init__(incoming_graph_data, **attr)
 
         self.snapshots = defaultdict(set)
         self.present = defaultdict(set)
         # self.locations = set()
 
-    def add_edge(self, u_of_edge, v_of_edge, **attr):
+    def add_edge(self, u_of_edge, v_of_edge, **attr) -> Any:
         """Add an edge to the temporal network
 
+        Updates the internal presence dictionaries
         Also see `networkx.DiGraph.add_edge`
+
+        Args:
+            u_of_edge: name of the source node of the edge to add
+            v_of_edge: name of the target node of the edge to add
+            **attr: edge attributes to add
         """
         _super_ret = super().add_edge(u_of_edge, v_of_edge, **attr)
 
@@ -34,14 +49,25 @@ class TemporalNetwork(nx.DiGraph):
 
         return _super_ret
 
-    def nodes_at_time(self, t):
-        return [(loc, t) for loc in self.snapshots[t]]
+    def nodes_at_time(self, t: Hashable) -> Sequence[Hashable]:
+        """Returns a list of all nodes present at a given time
 
-    def when_present(self, loc):
-        return [(loc, t) for t in self.present[loc]]
+        Args:
+            t (Hashable): time at which to slice nodes
+        """
+        return self.snapshots[t]
+
+    def when_present(self, loc: Hashable) -> Sequence[Hashable]:
+        """Returns a list of all times a location is present at
+
+        Args:
+            loc (Hashable): location to look up
+        """
+        return self.present[loc]
 
     @classmethod
-    def from_timenode_projection(cls, G: nx.DiGraph):
+    def from_timenode_projection(cls, G: nx.DiGraph) -> Self:
+        """Construct a temporal graph where the nodes are tuples of form (loc, t)"""
         TN = cls(G)
         for (u_loc, u_t), (v_loc, v_t) in G.edges:
             TN.snapshots[u_t].add(u_loc)
@@ -51,7 +77,9 @@ class TemporalNetwork(nx.DiGraph):
         return TN
 
     @classmethod
-    def read_graphml(cls, path, *args, **kwargs):
+    def read_graphml(cls, path: str | PathLike, *args, **kwargs) -> Self:
+        f"""Constructs a {cls} graph from a given graphml file"""
+
         def parse_tuple(tuple_str):
             loc, t = tuple_str.lstrip("(").rstrip(")").split(",")
             loc = loc.strip("'")
@@ -61,7 +89,8 @@ class TemporalNetwork(nx.DiGraph):
 
         return cls.from_timenode_projection(G)
 
-    def to_static(self):
+    def to_static(self) -> nx.DiGraph:
+        """Projects a TemporalNetwork to a static DiGraph on its locations"""
         S = nx.DiGraph()
         Nt = len(self.snapshots)
         for loc, ts in self.present.items():
@@ -81,20 +110,18 @@ class TemporalNetwork(nx.DiGraph):
         cls,
         presence: pl.DataFrame,
         discretisation: int = 1,
-        return_window: Numeric = 365,
-    ):
+        return_window: SupportsFloat = 365,
+    ) -> Self:
         """Converts a Dataframe of presences to a temporal network with base units of days
 
-        Parameters
-        ----------
-        presence: pola.rs DataFrame of presence. Assumes that the columns are ['sID', 'fID', 'Adate', 'Ddate']
+        Args:
+            presence (pl.DataFrame): dataframe of presence. Assumes that the columns are ['sID', 'fID', 'Adate', 'Ddate']
                 Assumes that 'Adate' and 'Ddate' columns are normalised to integers
-        discretisation: time discretisation of the temporal network
-        return_window: threshold over which successive presences are ignored
+            discretisation (int, optional): time discretisation of the temporal network. Defaults to 1.
+            return_window (SupportsFloat, optional): threshold over which successive presences are ignored. Defaults to 365
 
-        Returns
-        -------
-        TemporalNetwork where edges represent patients that have transferred between given locations.
+        Returns:
+            TemporalNetwork where edges represent patients that have transferred between given locations.
         """
         G = cls()
 
@@ -153,7 +180,7 @@ class TemporalNetwork(nx.DiGraph):
 
         return G
 
-    def write_graphml(self, outfile: str | PathLike, *args, **kwargs):
+    def write_graphml(self, outfile: str | PathLike, *args, **kwargs) -> None:
         """Write the temporal network to a graphml format file
 
         Args:
@@ -163,7 +190,7 @@ class TemporalNetwork(nx.DiGraph):
         """
         nx.write_graphml(self, outfile, *args, **kwargs)
 
-    def write_lgl(self, outfile: str | PathLike, weight="weight"):
+    def write_lgl(self, outfile: str | PathLike, weight="weight") -> None:
         """Write the temporal network out to an lgl-style file
 
         Args:
