@@ -1,5 +1,6 @@
 """This submodule provides utility functions to the `cleaner` submodule to correct overlapping patient admissions"""
 
+import logging
 import polars as pl
 
 from time import perf_counter as tic
@@ -167,9 +168,7 @@ def fix_overlaps_single_iter(df: pl.DataFrame) -> pl.DataFrame:
     return fixed_frame.collect()
 
 
-def fix_overlaps(
-    df: pl.DataFrame, iters: int = 1, verbose: bool = True
-) -> pl.DataFrame:
+def fix_overlaps(df: pl.DataFrame, iters: int = 1) -> pl.DataFrame:
     """Fixes overlapping patient records in the given database
 
 
@@ -178,15 +177,13 @@ def fix_overlaps(
     Args:
         df (pl.DataFrame): Database with overlaps to fix
         iters (int, optional): Number of iterations to run. Defaults to 1.
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
 
     Returns:
         pl.DataFrame: Database with overlaps fixed
     """
 
     timer_start = 0
-    if verbose:
-        timer_start = tic()
+    timer_start = tic()
 
     clean_records = []
     for iteration in range(iters):
@@ -198,23 +195,14 @@ def fix_overlaps(
         )
         df = df.filter(pl.col("sID").is_in(patients_with_overlaps))
         df = fix_overlaps_single_iter(df)
-        if verbose:
-            timer_old, timer_start = timer_start, tic()
-            print(
-                "Iteration",
-                iteration,
-                ":",
-                df.height,
-                "entries;",
-                n_overlaps,
-                "overlaps;",
-                timer_start - timer_old,
-                "s",
-            )
+        timer_old, timer_start = timer_start, tic()
+        logging.info(
+            f"Iteration {iteration}: {df.height} entries; {n_overlaps} overlaps; {timer_start - timer_old} s"
+        )
         if n_overlaps == 0:
             break
-    if verbose:
-        print("History of non-overlapping patient records:")
-        print([z.height for z in clean_records])
+
+    logging.info("History of non-overlapping patient records:")
+    logging.info([z.height for z in clean_records])
     # join the clean and corrected records
     return pl.concat([*clean_records, df])

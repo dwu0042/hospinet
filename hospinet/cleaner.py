@@ -1,6 +1,7 @@
 """This submodule provides utilities for validating and correcting a database of patient admissions."""
 
 import datetime
+import logging
 
 import polars as pl
 
@@ -87,13 +88,15 @@ def clean_database(
         pl.DataFrame: Cleaned database
     """
 
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+
     database = standardise_column_names(
         database=database,
         subject_id=subject_id,
         facility_id=facility_id,
         admission_date=admission_date,
         discharge_date=discharge_date,
-        verbose=verbose,
     )
 
     database = coerce_data_types(
@@ -102,32 +105,27 @@ def clean_database(
         date_format=date_format,
         subject_dtype=subject_dtype,
         facility_dtype=facility_dtype,
-        verbose=verbose,
     )
 
     # Trim auxiliary data
     if not retain_auxiliary_data:
-        if verbose:
-            print("Trimming auxiliary data...")
+        logging.info("Trimming auxiliary data...")
         database = database.select(pl.col("sID", "fID", "Adate", "Ddate"))
 
     # Check and clean missing values
     database = clean_missing_values(
         database=database,
         delete_missing=delete_missing,
-        verbose=verbose,
     )
 
     # Check erroneous records
     database = clean_erroneous_records(
         database=database,
         delete_errors=delete_errors,
-        verbose=verbose,
     )
 
     # remove row duplicates
-    if verbose:
-        print("Removing duplicate records...")
+    logging.info("Removing duplicate records...")
     database = database.unique()
 
     # Fix overlapping stays
@@ -142,7 +140,6 @@ def standardise_column_names(
     facility_id: str = "fID",
     admission_date: str = "Adate",
     discharge_date: str = "Ddate",
-    verbose: bool = True,
 ) -> pl.DataFrame:
     """Check and standardise column names for further processing
 
@@ -152,7 +149,6 @@ def standardise_column_names(
         facility_id (str, optional): Column name in the database that corresponds to the hospital (facility). Defaults to "fID".
         admission_date (str, optional): Column name in the database that corresponds to admission date/time. Defaults to "Adate".
         discharge_date (str, optional): Column name in the database that corresponds to discharge date/time. Defaults to "Ddate".
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
 
     Raises:
         DataHandlingError: If there is a missing column from the given columns.
@@ -161,21 +157,19 @@ def standardise_column_names(
         pl.DataFrame: Database with normalised column names
     """
     # Check column existence
-    if verbose:
-        print("Checking existence of columns...")
+    logging.info("Checking existence of columns...")
     expected_cols = {subject_id, facility_id, admission_date, discharge_date}
     found_cols = set(database.columns)
     missing_cols = expected_cols.difference(found_cols)
     if len(missing_cols):
-        raise DataHandlingError(
-            f"Column(s) {', '.join(missing_cols)} provided as argument were not found in the database."
-        )
-    elif verbose:
-        print("Column existence OK.")
+        error_message = f"Column(s) {', '.join(missing_cols)} provided as argument were not found in the database."
+        logging.error(error_message)
+        raise DataHandlingError(error_message)
+    else:
+        logging.info("Column existence OK.")
 
     # Standardise column names
-    if verbose:
-        print("Standardising column names...")
+    logging.info("Standardising column names...")
     return database.rename(
         {
             subject_id: "sID",
@@ -192,7 +186,6 @@ def coerce_data_types(
     date_format: str = r"%Y-%m-%d",
     subject_dtype: pl.DataType = pl.Utf8,
     facility_dtype: pl.DataType = pl.Utf8,
-    verbose: bool = True,
 ) -> pl.DataFrame:
     """Cast data types of the core columns to standard (given) types
 
@@ -202,17 +195,14 @@ def coerce_data_types(
         date_format (str, optional): date format to expect if manually_convert_dates is True. Defaults to r"%Y-%m-%d".
         subject_dtype (pl.DataType, optional): Polars datatype to coerce patient IDs to. Defaults to pl.Utf8.
         facility_dtype (pl.DataType, optional): Polars datatype to coerce hospital IDs to. Defaults to pl.Utf8.
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
 
     Returns:
         pl.DataFrame: Database with normalised column datatypes
     """
     # Check data format, column names, variable format, parse dates
-    if verbose:
-        print("Coercing types...")
+    logging.info("Coercing types...")
     if manually_convert_dates:
-        if verbose:
-            print(f"Manually converting dates from format {date_format}...")
+        logging.info(f"Manually converting dates from format {date_format}...")
         date_expressions = [
             pl.col("Adate").str.strptime(pl.Datetime, format=date_format),
             pl.col("Ddate").str.strptime(pl.Datetime, format=date_format),
@@ -226,20 +216,19 @@ def coerce_data_types(
         pl.col("fID").cast(facility_dtype),
         *date_expressions,
     )
-    if verbose:
-        print("Type coercion done.")
+    logging.info("Type coercion done.")
     return database
 
 
 def clean_missing_values(
-    database: pl.DataFrame, delete_missing: str | bool = False, verbose: bool = True
+    database: pl.DataFrame,
+    delete_missing: str | bool = False,
 ) -> pl.DataFrame:
     """Checks for and potentially deletes records with missing values
 
     Args:
         database (pl.DataFrame): Database (polars dataframe) of patient admissions. Columns have at least: patient, facility, admission time, discharge time.
         delete_missing (str | bool, optional): One of "record", "subject" or False. If "record", delete records which have missing values; if "subject", deletes records belonging to subjects which have at least one record that has a missing value; if False raises an exception if any records have missing values. Defaults to False.
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
 
     Raises:
         DataHandlingError: if delete_missing was set to False and missing records were found.
@@ -248,8 +237,7 @@ def clean_missing_values(
         pl.DataFrame: Database with missing values fixed
     """
     # Check for missing values
-    if verbose:
-        print("Checking for missing values...")
+    logging.info("Checking for missing values...")
     missing_records = database.filter(
         (
             pl.any_horizontal(pl.all().is_null())
@@ -257,20 +245,17 @@ def clean_missing_values(
         )
     )
     if len(missing_records):
-        if verbose:
-            print(f"Found {len(missing_records)} records with missing values.")
+        logging.info(f"Found {len(missing_records)} records with missing values.")
         match delete_missing:
             case False:
                 raise DataHandlingError(
                     "Please deal with these missing values or set argument delete_missing to 'record' or 'subject'."
                 )
             case "record":
-                if verbose:
-                    print("Deleting missing records...")
+                logging.info("Deleting missing records...")
                 return database.filter(pl.all(pl.col("*").is_not_null()))
             case "subject":
-                if verbose:
-                    print("Deleting records of subjects with any missing records...")
+                logging.info("Deleting records of subjects with any missing records...")
                 subjects = missing_records.select(pl.col("sID")).to_series()
                 return database.filter(~pl.col("subject").is_in(subjects))
             case _:
@@ -283,7 +268,8 @@ def clean_missing_values(
 
 
 def clean_erroneous_records(
-    database: pl.DataFrame, delete_errors: str | bool = False, verbose: bool = True
+    database: pl.DataFrame,
+    delete_errors: str | bool = False,
 ) -> pl.DataFrame:
     """Checks for and potentially deletes records which are erroneous
 
@@ -292,7 +278,6 @@ def clean_erroneous_records(
     Args:
         database (pl.DataFrame): Database (polars dataframe) of patient admissions. Columns have at least: patient, facility, admission time, discharge time.
         delete_errors (str | bool, optional): One of "record", "subject" or False. If "record", delete erroneous records; if "subject", deletes records belonging to subjects which have at least one erroneous record; if False raises an exception if erroneous records exist. Defaults to False.
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
 
     Raises:
         DataHandlingError: if delete_errors is False, and any erroneous records are found.
@@ -300,24 +285,20 @@ def clean_erroneous_records(
     Returns:
         pl.DataFrame: Database with erroneous records fixed
     """
-    if verbose:
-        print("Checking for erroneous records...")
+    logging.info("Checking for erroneous records...")
     erroneous_records = database.filter(pl.col("Adate") > pl.col("Ddate"))
     if len(erroneous_records):
-        if verbose:
-            print(f"Found {len(erroneous_records)} records with date errors.")
+        logging.info(f"Found {len(erroneous_records)} records with date errors.")
         match delete_errors:
             case False:
                 raise DataHandlingError(
                     "Please deal with these errors or set argument delete_errors to 'record' or 'subject'."
                 )
             case "record":
-                if verbose:
-                    print("Deleting records with date errors...")
+                logging.info("Deleting records with date errors...")
                 return database.filter((pl.col("Adate") > pl.col("Ddate")).is_not())
             case "subject":
-                if verbose:
-                    print("Deleting records of subjects with date errors...")
+                logging.info("Deleting records of subjects with date errors...")
                 subjects = erroneous_records.select(pl.col("sID")).to_series()
                 return database.filter(~pl.col("subject").is_in(subjects))
             case _:
@@ -330,7 +311,7 @@ def clean_erroneous_records(
 
 
 def fix_all_overlaps(
-    database: pl.DataFrame, n_iters: int = 100, verbose: bool = True
+    database: pl.DataFrame, n_iters: int = 100, log_iteration_status: bool = True
 ) -> pl.DataFrame:
     """Fixes overlapping records in the database.
 
@@ -341,19 +322,21 @@ def fix_all_overlaps(
     Args:
         database (pl.DataFrame): Database (polars dataframe) of patient admissions. Columns have at least: patient, facility, admission time, discharge time.
         n_iters (int, optional): Maximum number of iterations of overlap fixing. Defaults to 100.
-        verbose (bool, optional): if True, prints informational messages to STDOUT, otherwise run silently. Defaults to True.
+        log_iteration_status (bool, optional): if True, logs the number of overlaps at the end of each iteration
 
     Returns:
         pl.DataFrame: Database with overlaps corrected
     """
-    if verbose:
-        print("Finding and fixing overlapping records...")
+    logging.info("Finding and fixing overlapping records...")
 
-    database = ovlfxr.fix_overlaps(database, iters=n_iters, verbose=verbose)
+    database = ovlfxr.fix_overlaps(
+        database,
+        iters=n_iters,
+    )
 
-    if verbose:
+    if log_iteration_status:
         n_overlaps = ovlfxr.num_overlaps(database)
-        print(n_overlaps, "overlaps remaining after iterations...")
+        logging.info(n_overlaps, "overlaps remaining after iterations...")
 
     return database
 
