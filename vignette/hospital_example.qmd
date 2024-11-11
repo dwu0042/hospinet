@@ -1,9 +1,10 @@
 ---
 title: A Small Example
 author: David Wu
-date: 23 October 2024
+date: last-modified
 format:
-    pdf: default
+    pdf: 
+        papersize: a4
     html:
         code-fold: false
 jupyter: python3
@@ -18,6 +19,7 @@ import hospinet
 import polars as pl
 import networkx as nx
 
+from pprint import pprint
 from matplotlib import pyplot as plt # for later
 ```
 
@@ -79,6 +81,8 @@ nx.draw_networkx_edge_labels(
 We provide some basic indexing support via methods:
 
 ```{python}
-print("Nodes with presence at time 15: ", network.nodes_at_time(15))
-print("When hospital D is occupied: ", network.when_present('D'))
+print("Hospitals with presence at time 15: ", network.locs_at_time(15))
+print("Corresponding nodes: ", network.nodes_at_time(15))
+print("When hospital D is occupied: ")
+pprint(network.times_for_place('D'), width=70, compact=True)
 ```

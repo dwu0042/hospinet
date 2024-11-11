@@ -5,7 +5,7 @@ import networkx as nx
 
 from collections import defaultdict
 
-from typing import SupportsFloat, Hashable, Self, Sequence, Any
+from typing import SupportsFloat, Hashable, Self, Sequence, Iterable, Set, Any
 from os import PathLike
 
 
@@ -49,21 +49,69 @@ class TemporalNetwork(nx.DiGraph):
 
         return _super_ret
 
-    def nodes_at_time(self, t: Hashable) -> Sequence[Hashable]:
-        """Returns a list of all nodes present at a given time
+    def locs_at_time(self, t: Hashable) -> Set[Hashable]:
+        """Returns a set of all locations present at a given time
 
         Args:
             t (Hashable): time at which to slice nodes
         """
         return self.snapshots[t]
 
-    def when_present(self, loc: Hashable) -> Sequence[Hashable]:
-        """Returns a list of all times a location is present at
+    def nodes_at_time(self, t: Hashable) -> Sequence[Hashable]:
+        """Returns a list of nodes for all locations present at a given time
+
+        Args:
+            t (Hashable): time at which to slice nodes
+        """
+
+        return self.nodes_like(self.locs_at_time(t), t)
+
+    def times_for_place(self, loc: Hashable) -> Set[Hashable]:
+        """Returns a set of all times a location is present at
 
         Args:
             loc (Hashable): location to look up
         """
         return self.present[loc]
+
+    def nodes_for_place(self, loc: Hashable) -> Sequence[Hashable]:
+        """Returns a list of nodes for all times a location is present at
+
+        Args:
+            loc (Hashable): location to look up
+        """
+        return self.nodes_like(loc, self.times_for_place(loc))
+
+    @staticmethod
+    def nodes_like(
+        loc: Hashable | Iterable[Hashable], t: Hashable | Iterable[Hashable]
+    ):
+        """Combines loc and t inputs into node lookups
+
+        Args:
+            loc (Hashable | Iterable[Hashable]): Either a single location, or a list of locations
+            t (Hashable | Iterable[Hashable]): Either a single time, or a list of times
+
+        Notes:
+            A maximum of one input argument can be a list
+
+        Returns:
+            Sequence[Hashable]: A list of tuples that can be looked up as nodes
+        """
+        # Treat strings as singletons
+        is_loc_iterable = isinstance(loc, Iterable) and not isinstance(loc, str)
+        is_t_iterable = isinstance(t, Iterable) and not isinstance(t, str)
+
+        if not is_loc_iterable and not is_t_iterable:
+            return [(loc, t)]
+        elif is_loc_iterable and not is_t_iterable:
+            return [(item, t) for item in loc]
+        elif not is_loc_iterable and is_t_iterable:
+            return [(loc, item) for item in t]
+        else:
+            raise ValueError(
+                "Unexpected input types. Only one input can be an iterable at a time."
+            )
 
     @classmethod
     def from_timenode_projection(cls, G: nx.DiGraph) -> Self:
@@ -164,19 +212,21 @@ class TemporalNetwork(nx.DiGraph):
             ((ux, ut), (vx, vt), w) for ux, ut, vx, vt, w in edges.iter_rows()
         )
 
-        G.snapshots = dict(
-            presence.group_by("present")
+        G.snapshots = {
+            k: set(v)
+            for k, v in presence.group_by("present")
             .all()
             .select(pl.col("present"), pl.col("fID").list.unique())
             .to_numpy()
-        )
+        }
 
-        G.present = dict(
-            presence.group_by("fID")
+        G.present = {
+            k: set(v)
+            for k, v in presence.group_by("fID")
             .all()
             .select(pl.col("fID"), pl.col("present").list.unique())
             .to_numpy()
-        )
+        }
 
         return G
 
@@ -202,7 +252,7 @@ class TemporalNetwork(nx.DiGraph):
         # we do this to customise the printing of the tuple-nodes:
         # they otherwise would have whitespace, which breaks the lgl format
         with open(outfile, "w") as fp:
-            for (loc_from, time_from), (loc_to, time_to), attr_dict in nx.to_edgelist(self):
+            for (l_fr, t_fr), (l_to, t_to), attr_dict in nx.to_edgelist(self):
                 fp.write(
-                    f"""({loc_from},{time_from}) ({loc_to},{time_to}) {attr_dict.get(weight)}\n"""
+                    f"""({l_fr},{t_fr}) ({l_to},{t_to}) {attr_dict.get(weight)}\n"""
                 )
