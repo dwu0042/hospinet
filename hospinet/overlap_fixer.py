@@ -1,9 +1,12 @@
 """This submodule provides utility functions to the `cleaner` submodule to correct overlapping patient admissions"""
 
 import logging
+import re
 import polars as pl
 
 from time import perf_counter as tic
+
+logger = logging.getLogger("hospinet")
 
 
 def scan_overlaps(df: pl.DataFrame) -> pl.LazyFrame:
@@ -186,6 +189,7 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1) -> pl.DataFrame:
     timer_start = tic()
 
     clean_records = []
+    logger.info(f"Attempting up to {iters} iterations")
     for iteration in range(iters):
         overlaps = scan_overlaps(df).collect()
         n_overlaps = overlaps.height
@@ -196,13 +200,19 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1) -> pl.DataFrame:
         df = df.filter(pl.col("sID").is_in(patients_with_overlaps))
         df = fix_overlaps_single_iter(df)
         timer_old, timer_start = timer_start, tic()
-        logging.info(
+        logger.info(
             f"Iteration {iteration}: {df.height} entries; {n_overlaps} overlaps; {timer_start - timer_old} s"
         )
         if n_overlaps == 0:
             break
 
-    logging.info("History of non-overlapping patient records:")
-    logging.info([z.height for z in clean_records])
+    # print number of non overlapping records; group zeros into "...[count]"
+    non_overlaps = str([z.height for z in clean_records])
+    non_overlaps_grouped_zeros = re.sub(
+        r"( 0,){2,}", lambda m: rf" 0...{{{m.group(0).count('0')}x}},", non_overlaps
+    )
+    logger.info("History of non-overlapping patient records:")
+    logger.info(non_overlaps_grouped_zeros)
+
     # join the clean and corrected records
     return pl.concat([*clean_records, df])

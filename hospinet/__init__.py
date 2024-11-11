@@ -14,3 +14,19 @@ __all__ = [
 from . import *
 
 from .temporal_network import TemporalNetwork
+
+import logging
+
+
+def __create_logger():
+    logger = logging.getLogger("hospinet")
+    logger.setLevel(logging.WARNING)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    log_format = logging.Formatter("%(levelname)s::%(name)s::%(message)s")
+    console_handler.setFormatter(log_format)
+    logger.addHandler(console_handler)
+    return logger
+
+
+logger = __create_logger()

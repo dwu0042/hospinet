@@ -10,6 +10,8 @@ from . import overlap_fixer as ovlfxr
 from typing import Sequence, Hashable
 from os import PathLike
 
+logger = logging.getLogger("hospinet")
+
 _nulls = [
     "",
     "NA",
@@ -89,7 +91,7 @@ def clean_database(
     """
 
     if verbose:
-        logging.basicConfig(level=logging.INFO)
+        logger.setLevel(logging.INFO)
 
     database = standardise_column_names(
         database=database,
@@ -109,7 +111,7 @@ def clean_database(
 
     # Trim auxiliary data
     if not retain_auxiliary_data:
-        logging.info("Trimming auxiliary data...")
+        logger.info("Trimming auxiliary data...")
         database = database.select(pl.col("sID", "fID", "Adate", "Ddate"))
 
     # Check and clean missing values
@@ -125,7 +127,7 @@ def clean_database(
     )
 
     # remove row duplicates
-    logging.info("Removing duplicate records...")
+    logger.info("Removing duplicate records...")
     database = database.unique()
 
     # Fix overlapping stays
@@ -157,19 +159,19 @@ def standardise_column_names(
         pl.DataFrame: Database with normalised column names
     """
     # Check column existence
-    logging.info("Checking existence of columns...")
+    logger.info("Checking existence of columns...")
     expected_cols = {subject_id, facility_id, admission_date, discharge_date}
     found_cols = set(database.columns)
     missing_cols = expected_cols.difference(found_cols)
     if len(missing_cols):
         error_message = f"Column(s) {', '.join(missing_cols)} provided as argument were not found in the database."
-        logging.error(error_message)
+        logger.error(error_message)
         raise DataHandlingError(error_message)
     else:
-        logging.info("Column existence OK.")
+        logger.info("Column existence OK.")
 
     # Standardise column names
-    logging.info("Standardising column names...")
+    logger.info("Standardising column names...")
     return database.rename(
         {
             subject_id: "sID",
@@ -200,9 +202,9 @@ def coerce_data_types(
         pl.DataFrame: Database with normalised column datatypes
     """
     # Check data format, column names, variable format, parse dates
-    logging.info("Coercing types...")
+    logger.info("Coercing types...")
     if manually_convert_dates:
-        logging.info(f"Manually converting dates from format {date_format}...")
+        logger.info(f"Manually converting dates from format {date_format}...")
         date_expressions = [
             pl.col("Adate").str.strptime(pl.Datetime, format=date_format),
             pl.col("Ddate").str.strptime(pl.Datetime, format=date_format),
@@ -216,7 +218,7 @@ def coerce_data_types(
         pl.col("fID").cast(facility_dtype),
         *date_expressions,
     )
-    logging.info("Type coercion done.")
+    logger.info("Type coercion done.")
     return database
 
 
@@ -237,7 +239,7 @@ def clean_missing_values(
         pl.DataFrame: Database with missing values fixed
     """
     # Check for missing values
-    logging.info("Checking for missing values...")
+    logger.info("Checking for missing values...")
     missing_records = database.filter(
         (
             pl.any_horizontal(pl.all().is_null())
@@ -245,17 +247,17 @@ def clean_missing_values(
         )
     )
     if len(missing_records):
-        logging.info(f"Found {len(missing_records)} records with missing values.")
+        logger.info(f"Found {len(missing_records)} records with missing values.")
         match delete_missing:
             case False:
                 raise DataHandlingError(
                     "Please deal with these missing values or set argument delete_missing to 'record' or 'subject'."
                 )
             case "record":
-                logging.info("Deleting missing records...")
+                logger.info("Deleting missing records...")
                 return database.filter(pl.all(pl.col("*").is_not_null()))
             case "subject":
-                logging.info("Deleting records of subjects with any missing records...")
+                logger.info("Deleting records of subjects with any missing records...")
                 subjects = missing_records.select(pl.col("sID")).to_series()
                 return database.filter(~pl.col("subject").is_in(subjects))
             case _:
@@ -285,20 +287,20 @@ def clean_erroneous_records(
     Returns:
         pl.DataFrame: Database with erroneous records fixed
     """
-    logging.info("Checking for erroneous records...")
+    logger.info("Checking for erroneous records...")
     erroneous_records = database.filter(pl.col("Adate") > pl.col("Ddate"))
     if len(erroneous_records):
-        logging.info(f"Found {len(erroneous_records)} records with date errors.")
+        logger.info(f"Found {len(erroneous_records)} records with date errors.")
         match delete_errors:
             case False:
                 raise DataHandlingError(
                     "Please deal with these errors or set argument delete_errors to 'record' or 'subject'."
                 )
             case "record":
-                logging.info("Deleting records with date errors...")
+                logger.info("Deleting records with date errors...")
                 return database.filter((pl.col("Adate") > pl.col("Ddate")).is_not())
             case "subject":
-                logging.info("Deleting records of subjects with date errors...")
+                logger.info("Deleting records of subjects with date errors...")
                 subjects = erroneous_records.select(pl.col("sID")).to_series()
                 return database.filter(~pl.col("subject").is_in(subjects))
             case _:
@@ -327,7 +329,7 @@ def fix_all_overlaps(
     Returns:
         pl.DataFrame: Database with overlaps corrected
     """
-    logging.info("Finding and fixing overlapping records...")
+    logger.info("Finding and fixing overlapping records...")
 
     database = ovlfxr.fix_overlaps(
         database,
@@ -336,7 +338,7 @@ def fix_all_overlaps(
 
     if log_iteration_status:
         n_overlaps = ovlfxr.num_overlaps(database)
-        logging.info(n_overlaps, "overlaps remaining after iterations...")
+        logger.info(f"{n_overlaps} overlaps remaining after iterations")
 
     return database
 
