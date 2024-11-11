@@ -5,7 +5,7 @@ This package provides utilities for cleaning a database of patient admissions, e
 This takes heavy inspiration from the HospitalNetwork R package, and is intended to be a Python port of its checkBase functionality.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 __all__ = [
