@@ -5,28 +5,34 @@ This package provides utilities for cleaning a database of patient admissions, e
 This takes heavy inspiration from the HospitalNetwork R package, and is intended to be a Python port of its checkBase functionality.
 """
 
+__version__ = "1.0.1"
+
+
 __all__ = [
     "temporal_network",
     "cleaner",
     "overlap_fixer",
+    "TemporalNetwork",
 ]
 
-from . import *
+from . import temporal_network, cleaner, overlap_fixer
 
 from .temporal_network import TemporalNetwork
 
-import logging
+
+# private logging setup
+import logging as __logging
 
 
 def __create_logger():
-    logger = logging.getLogger("hospinet")
-    logger.setLevel(logging.WARNING)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    log_format = logging.Formatter("%(levelname)s::%(name)s::%(message)s")
+    logger = __logging.getLogger("hospinet")
+    logger.setLevel(__logging.WARNING)
+    console_handler = __logging.StreamHandler()
+    console_handler.setLevel(__logging.INFO)
+    log_format = __logging.Formatter("%(levelname)s::%(name)s::%(message)s")
     console_handler.setFormatter(log_format)
     logger.addHandler(console_handler)
     return logger
 
 
-logger = __create_logger()
+__logger = __create_logger()
