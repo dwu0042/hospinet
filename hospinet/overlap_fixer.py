@@ -15,10 +15,10 @@ def scan_overlaps(df: pl.DataFrame) -> pl.LazyFrame:
     Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
 
     Args:
-        df (pl.DataFrame): Database to scan for overlaps
+        df: Database to scan for overlaps
 
     Returns:
-        pl.LazyFrame: Query that can be .collect() -ed to return a dataframe of overlaps
+        Query that can be .collect() -ed to return a dataframe of overlaps
     """
     overlaps = (
         df.lazy()
@@ -40,10 +40,10 @@ def num_overlaps(df: pl.DataFrame) -> int:
     Overlaps are records where, for the same patient, the admission date for a record is before the discharge date of the previous record.
 
     Args:
-        df (pl.DataFrame): Database to scan for overlaps
+        df: Database to scan for overlaps
 
     Returns:
-        int: number of overlapping records
+        number of overlapping records
 
     """
     return scan_overlaps(df).collect().height
@@ -65,10 +65,10 @@ def fix_overlaps_single_iter(df: pl.DataFrame) -> pl.DataFrame:
     This single iteration does not necessarily fix all overlaps.
 
     Args:
-        df (pl.DataFrame): Dataframe to fix overlaps in
+        df: Dataframe to fix overlaps in
 
     Returns:
-        pl.DataFrame: Dataframe with one iteration of overlap fixes
+        Dataframe with one iteration of overlap fixes
 
     """
 
@@ -178,11 +178,11 @@ def fix_overlaps(df: pl.DataFrame, iters: int = 1) -> pl.DataFrame:
     Also see `fix_overlaps_single_iter` for the overlap correction logic
 
     Args:
-        df (pl.DataFrame): Database with overlaps to fix
-        iters (int, optional): Number of iterations to run. Defaults to 1.
+        df: Database with overlaps to fix
+        iters: Number of iterations to run. Defaults to 1.
 
     Returns:
-        pl.DataFrame: Database with overlaps fixed
+        Database with overlaps fixed
     """
 
     timer_start = 0

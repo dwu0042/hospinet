@@ -15,13 +15,13 @@ EMPTY_EDGE = {"weight": 0}
 class TemporalNetwork(nx.DiGraph):
     """A temporal network for hospital patient transfers"""
 
-    def __init__(self, incoming_graph_data=None, **attr) -> None:
+    def __init__(self, incoming_graph_data: Any=None, **attr) -> None:
         """Create a temporal network that is based on a `networkx.DiGraph`
 
         Adds the internal snapshots and present lookup dictionaries to the base construction
 
         Args:
-            incoming_graph_data (optional): Graph data to parse by networkx
+            incoming_graph_data: Graph data to parse by networkx
             **attr: Graph attributes to pass to networkx constructor
         """
         super().__init__(incoming_graph_data, **attr)
@@ -53,7 +53,7 @@ class TemporalNetwork(nx.DiGraph):
         """Returns a set of all locations present at a given time
 
         Args:
-            t (Hashable): time at which to slice nodes
+            t: time at which to slice nodes
         """
         return self.snapshots[t]
 
@@ -61,7 +61,7 @@ class TemporalNetwork(nx.DiGraph):
         """Returns a list of nodes for all locations present at a given time
 
         Args:
-            t (Hashable): time at which to slice nodes
+            t: time at which to slice nodes
         """
 
         return self.nodes_like(self.locs_at_time(t), t)
@@ -70,7 +70,7 @@ class TemporalNetwork(nx.DiGraph):
         """Returns a set of all times a location is present at
 
         Args:
-            loc (Hashable): location to look up
+            loc: location to look up
         """
         return self.present[loc]
 
@@ -78,7 +78,7 @@ class TemporalNetwork(nx.DiGraph):
         """Returns a list of nodes for all times a location is present at
 
         Args:
-            loc (Hashable): location to look up
+            loc: location to look up
         """
         return self.nodes_like(loc, self.times_for_place(loc))
 
@@ -89,14 +89,14 @@ class TemporalNetwork(nx.DiGraph):
         """Combines loc and t inputs into node lookups
 
         Args:
-            loc (Hashable | Iterable[Hashable]): Either a single location, or a list of locations
-            t (Hashable | Iterable[Hashable]): Either a single time, or a list of times
+            loc: Either a single location, or a list of locations
+            t: Either a single time, or a list of times
 
         Notes:
             A maximum of one input argument can be a list
 
         Returns:
-            Sequence[Hashable]: A list of tuples that can be looked up as nodes
+            A list of tuples that can be looked up as nodes
         """
         # Treat strings as singletons
         is_loc_iterable = isinstance(loc, Iterable) and not isinstance(loc, str)
@@ -115,7 +115,14 @@ class TemporalNetwork(nx.DiGraph):
 
     @classmethod
     def from_timenode_projection(cls, G: nx.DiGraph) -> Self:
-        """Construct a temporal graph where the nodes are tuples of form (loc, t)"""
+        """Construct a temporal graph where the nodes are tuples of form (loc, t)
+        
+        Args:
+            G: networkx Graph with nodes in tuple form
+
+        Returns:
+            TemporalNetwork that has helper attributes for location/time lookup
+        """
         TN = cls(G)
         for (u_loc, u_t), (v_loc, v_t) in G.edges:
             TN.snapshots[u_t].add(u_loc)
@@ -126,7 +133,16 @@ class TemporalNetwork(nx.DiGraph):
 
     @classmethod
     def read_graphml(cls, path: str | PathLike, *args, **kwargs) -> Self:
-        f"""Constructs a {cls} graph from a given graphml file"""
+        """Constructs a TemporalNetwork graph from a given graphml file
+        
+        Args:
+            path: path to the graphml file
+            *args: positional arguments to pass to `networkx.read_graphml`
+            **kwargs: keyword arguments to pass to `networkx.read_graphml`
+
+        Returns:
+            TemporalNetwork instance representing the graphml temporal network
+        """
 
         def parse_tuple(tuple_str):
             loc, t = tuple_str.lstrip("(").rstrip(")").split(",")
@@ -163,10 +179,10 @@ class TemporalNetwork(nx.DiGraph):
         """Converts a Dataframe of presences to a temporal network with base units of days
 
         Args:
-            presence (pl.DataFrame): dataframe of presence. Assumes that the columns are ['sID', 'fID', 'Adate', 'Ddate']
+            presence: dataframe of presence. Assumes that the columns are ['sID', 'fID', 'Adate', 'Ddate']
                 Assumes that 'Adate' and 'Ddate' columns are normalised to integers
-            discretisation (int, optional): time discretisation of the temporal network. Defaults to 1.
-            return_window (SupportsFloat, optional): threshold over which successive presences are ignored. Defaults to 365
+            discretisation: time discretisation of the temporal network. Defaults to 1.
+            return_window: threshold over which successive presences are ignored. Defaults to 365
 
         Returns:
             TemporalNetwork where edges represent patients that have transferred between given locations.
@@ -234,18 +250,18 @@ class TemporalNetwork(nx.DiGraph):
         """Write the temporal network to a graphml format file
 
         Args:
-            outfile (str | PathLike): Path to write file to
+            outfile: Path to write file to
             *args: positional arguments to pass to `networkx.write_graphml`
             **kwargs: keyword arguments to pass to `networkx.write_graphml`
         """
         nx.write_graphml(self, outfile, *args, **kwargs)
 
-    def write_lgl(self, outfile: str | PathLike, weight="weight") -> None:
+    def write_lgl(self, outfile: str | PathLike, weight: str="weight") -> None:
         """Write the temporal network out to an lgl-style file
 
         Args:
-            outfile (str | Pathlike): Path to write file to
-            weight (str, optional): Edge attribute to use as weight column in lgl format. If this attribute does not exist for an edge, replaces with empty
+            outfile: Path to write file to
+            weight: Edge attribute to use as weight column in lgl format. If this attribute does not exist for an edge, replaces with empty
         """
 
         # instead of using networkx.write_weighted_edgelist
